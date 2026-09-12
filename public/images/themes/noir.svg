@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 380" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgNoir" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#09090B"/>
+      <stop offset="100%" stop-color="#020203"/>
+    </linearGradient>
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="600" height="380" rx="16" fill="url(#bgNoir)"/>
+
+  <!-- Top Bar -->
+  <rect x="0" y="0" width="600" height="42" fill="#111113" stroke="#27272A" stroke-width="1"/>
+  <circle cx="28" cy="21" r="5" fill="#EF4444" opacity="0.8"/>
+  <circle cx="44" cy="21" r="5" fill="#F59E0B" opacity="0.8"/>
+  <circle cx="60" cy="21" r="5" fill="#10B981" opacity="0.8"/>
+  <rect x="180" y="11" width="240" height="20" rx="10" fill="#18181B"/>
+  <text x="300" y="25" fill="#71717A" font-family="system-ui, sans-serif" font-size="10" font-weight="600" text-anchor="middle">noir.dzmenu.com</text>
+
+  <!-- Header Banner -->
+  <rect x="24" y="58" width="552" height="110" rx="12" fill="#141417" stroke="#27272A" stroke-width="1"/>
+  <circle cx="80" cy="113" r="32" fill="#18181B" stroke="url(#emeraldGrad)" stroke-width="1.5"/>
+  <text x="80" y="123" font-size="30" text-anchor="middle">🍣</text>
+  <text x="130" y="105" fill="#FFFFFF" font-family="system-ui, sans-serif" font-size="20" font-weight="bold" letter-spacing="1">NOIR SUSHI LOUNGE</text>
+  <text x="130" y="125" fill="#71717A" font-family="system-ui, sans-serif" font-size="11">OLED Minimal Luxury • Neon Emerald Accents</text>
+  <rect x="490" y="98" width="70" height="26" rx="13" fill="url(#emeraldGrad)"/>
+  <text x="525" y="115" fill="#000000" font-family="system-ui, sans-serif" font-size="10" font-weight="bold" text-anchor="middle">ACTIVE</text>
+
+  <!-- Glass Tabs -->
+  <rect x="24" y="184" width="80" height="30" rx="8" fill="url(#emeraldGrad)" fill-opacity="0.2" stroke="url(#emeraldGrad)" stroke-width="1"/>
+  <text x="64" y="203" fill="#10B981" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" text-anchor="middle">🍣 Nigiri</text>
+
+  <rect x="112" y="184" width="80" height="30" rx="8" fill="#18181B" stroke="#27272A" stroke-width="1"/>
+  <text x="152" y="203" fill="#A1A1AA" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">🍱 Rolls</text>
+
+  <rect x="200" y="184" width="80" height="30" rx="8" fill="#18181B" stroke="#27272A" stroke-width="1"/>
+  <text x="240" y="203" fill="#A1A1AA" font-family="system-ui, sans-serif" font-size="11" text-anchor="middle">🥢 Starters</text>
+
+  <!-- Cards -->
+  <g transform="translate(24, 230)">
+    <rect width="268" height="126" rx="12" fill="#141417" stroke="#27272A" stroke-width="1"/>
+    <rect x="12" y="14" width="70" height="70" rx="10" fill="#18181B"/>
+    <text x="47" y="58" font-size="32" text-anchor="middle">🍣</text>
+    <text x="94" y="34" fill="#FFFFFF" font-family="system-ui, sans-serif" font-size="13" font-weight="bold">Otoro Gold Nigiri</text>
+    <text x="94" y="52" fill="#71717A" font-family="system-ui, sans-serif" font-size="10">Bluefin tuna belly, 24k gold leaf</text>
+    <text x="94" y="86" fill="#10B981" font-family="system-ui, sans-serif" font-size="14" font-weight="bold">3,600 DZD</text>
+    <rect x="196" y="70" width="60" height="26" rx="8" fill="url(#emeraldGrad)"/>
+    <text x="226" y="87" fill="#000000" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" text-anchor="middle">+ Add</text>
+  </g>
+
+  <g transform="translate(308, 230)">
+    <rect width="268" height="126" rx="12" fill="#141417" stroke="#27272A" stroke-width="1"/>
+    <rect x="12" y="14" width="70" height="70" rx="10" fill="#18181B"/>
+    <text x="47" y="58" font-size="32" text-anchor="middle">🍱</text>
+    <text x="94" y="34" fill="#FFFFFF" font-family="system-ui, sans-serif" font-size="13" font-weight="bold">Dragon Unagi Roll</text>
+    <text x="94" y="52" fill="#71717A" font-family="system-ui, sans-serif" font-size="10">Smoked freshwater eel, avocado</text>
+    <text x="94" y="86" fill="#10B981" font-family="system-ui, sans-serif" font-size="14" font-weight="bold">2,400 DZD</text>
+    <rect x="196" y="70" width="60" height="26" rx="8" fill="url(#emeraldGrad)"/>
+    <text x="226" y="87" fill="#000000" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" text-anchor="middle">+ Add</text>
+  </g>
+</svg>

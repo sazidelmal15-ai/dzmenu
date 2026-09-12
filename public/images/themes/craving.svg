@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 380" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgCraving" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFBF7"/>
+      <stop offset="100%" stop-color="#FFF4EA"/>
+    </linearGradient>
+    <linearGradient id="redGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#EF4444"/>
+      <stop offset="100%" stop-color="#DC2626"/>
+    </linearGradient>
+    <linearGradient id="yellowGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FBBF24"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="380" rx="16" fill="url(#bgCraving)"/>
+
+  <!-- Top Bar -->
+  <rect x="0" y="0" width="600" height="42" fill="#FFFFFF" stroke="#F3E8DC" stroke-width="1"/>
+  <circle cx="28" cy="21" r="5" fill="#EF4444"/>
+  <circle cx="44" cy="21" r="5" fill="#F59E0B"/>
+  <circle cx="60" cy="21" r="5" fill="#10B981"/>
+  <rect x="180" y="11" width="240" height="20" rx="10" fill="#F9FAFB" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="300" y="25" fill="#6B7280" font-family="system-ui, sans-serif" font-size="10" font-weight="600" text-anchor="middle">craving.dzmenu.com</text>
+
+  <!-- Header Banner -->
+  <rect x="24" y="58" width="552" height="110" rx="12" fill="url(#redGrad)"/>
+  <circle cx="80" cy="113" r="32" fill="#FFFFFF"/>
+  <text x="80" y="123" font-size="30" text-anchor="middle">🍔</text>
+  <text x="130" y="105" fill="#FFFFFF" font-family="system-ui, sans-serif" font-size="20" font-weight="900">CRAVING BURGER CO.</text>
+  <text x="130" y="125" fill="#FEE2E2" font-family="system-ui, sans-serif" font-size="11" font-weight="500">Smashed Patties • Loaded Fries • 2-Col Fast Food Grid</text>
+  <rect x="490" y="98" width="70" height="26" rx="13" fill="url(#yellowGrad)"/>
+  <text x="525" y="115" fill="#78350F" font-family="system-ui, sans-serif" font-size="10" font-weight="900" text-anchor="middle">HOT &amp; FAST</text>
+
+  <!-- Badge Tabs -->
+  <rect x="24" y="184" width="72" height="30" rx="15" fill="url(#redGrad)"/>
+  <text x="60" y="203" fill="#FFFFFF" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" text-anchor="middle">🔥 All</text>
+
+  <rect x="104" y="184" width="86" height="30" rx="15" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="147" y="203" fill="#374151" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" text-anchor="middle">🍔 Burgers</text>
+
+  <rect x="198" y="184" width="80" height="30" rx="15" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="238" y="203" fill="#374151" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" text-anchor="middle">🍟 Fries</text>
+
+  <rect x="286" y="184" width="80" height="30" rx="15" fill="#FFFFFF" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="326" y="203" fill="#374151" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" text-anchor="middle">🥤 Drinks</text>
+
+  <!-- 2-Col Cards -->
+  <g transform="translate(24, 230)">
+    <rect width="268" height="126" rx="12" fill="#FFFFFF" stroke="#F3E8DC" stroke-width="1"/>
+    <rect x="12" y="14" width="70" height="70" rx="10" fill="#FFF4EA"/>
+    <text x="47" y="58" font-size="32" text-anchor="middle">🍔</text>
+    <text x="94" y="34" fill="#111827" font-family="system-ui, sans-serif" font-size="13" font-weight="800">Double Smash Burger</text>
+    <text x="94" y="52" fill="#6B7280" font-family="system-ui, sans-serif" font-size="10">Double beef patty, secret sauce</text>
+    <text x="94" y="86" fill="#DC2626" font-family="system-ui, sans-serif" font-size="14" font-weight="900">1,250 DZD</text>
+    <rect x="196" y="70" width="60" height="26" rx="8" fill="url(#redGrad)"/>
+    <text x="226" y="87" fill="#FFFFFF" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" text-anchor="middle">+ Add</text>
+  </g>
+
+  <g transform="translate(308, 230)">
+    <rect width="268" height="126" rx="12" fill="#FFFFFF" stroke="#F3E8DC" stroke-width="1"/>
+    <rect x="12" y="14" width="70" height="70" rx="10" fill="#FFF4EA"/>
+    <text x="47" y="58" font-size="32" text-anchor="middle">🍟</text>
+    <text x="94" y="34" fill="#111827" font-family="system-ui, sans-serif" font-size="13" font-weight="800">Cheddar Bacon Fries</text>
+    <text x="94" y="52" fill="#6B7280" font-family="system-ui, sans-serif" font-size="10">Crispy skin-on, melted cheese</text>
+    <text x="94" y="86" fill="#DC2626" font-family="system-ui, sans-serif" font-size="14" font-weight="900">650 DZD</text>
+    <rect x="196" y="70" width="60" height="26" rx="8" fill="url(#redGrad)"/>
+    <text x="226" y="87" fill="#FFFFFF" font-family="system-ui, sans-serif" font-size="11" font-weight="bold" text-anchor="middle">+ Add</text>
+  </g>
+</svg>

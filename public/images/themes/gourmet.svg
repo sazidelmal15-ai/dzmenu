@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 380" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141519"/>
+      <stop offset="100%" stop-color="#0b0c0e"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#D97706"/>
+    </linearGradient>
+    <linearGradient id="cardBg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1E2026"/>
+      <stop offset="100%" stop-color="#181A1F"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="600" height="380" rx="16" fill="url(#bg)"/>
+
+  <!-- Top Bar -->
+  <rect x="0" y="0" width="600" height="42" fill="#181A1F" fill-opacity="0.8"/>
+  <circle cx="28" cy="21" r="5" fill="#EF4444" opacity="0.8"/>
+  <circle cx="44" cy="21" r="5" fill="#F59E0B" opacity="0.8"/>
+  <circle cx="60" cy="21" r="5" fill="#10B981" opacity="0.8"/>
+  <rect x="180" y="11" width="240" height="20" rx="10" fill="#262830" opacity="0.6"/>
+  <text x="300" y="25" fill="#9CA3AF" font-family="system-ui, sans-serif" font-size="10" font-weight="600" text-anchor="middle">gourmet.dzmenu.com</text>
+
+  <!-- Header Banner -->
+  <rect x="24" y="58" width="552" height="110" rx="12" fill="url(#cardBg)" stroke="#2E323D" stroke-width="1"/>
+  <circle cx="80" cy="113" r="32" fill="#2E323D"/>
+  <text x="80" y="121" fill="url(#gold)" font-family="system-ui, serif" font-size="24" font-weight="bold" text-anchor="middle">G</text>
+  <text x="130" y="105" fill="#FFFFFF" font-family="system-ui, serif" font-size="18" font-weight="bold">GOURMET STEAKHOUSE</text>
+  <text x="130" y="125" fill="#9CA3AF" font-family="system-ui, sans-serif" font-size="11">Fine Dining • Luxury Gold Aesthetic • Story Categories</text>
+  <rect x="500" y="98" width="60" height="26" rx="13" fill="url(#gold)"/>
+  <text x="530" y="115" fill="#000000" font-family="system-ui, sans-serif" font-size="10" font-weight="bold" text-anchor="middle">OPEN</text>
+
+  <!-- Category Stories -->
+  <circle cx="60" cy="198" r="18" fill="url(#cardBg)" stroke="url(#gold)" stroke-width="2"/>
+  <text x="60" y="203" fill="#FFF" font-size="12" text-anchor="middle">🥩</text>
+  <text x="60" y="228" fill="#D1D5DB" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle">Steaks</text>
+
+  <circle cx="120" cy="198" r="18" fill="url(#cardBg)" stroke="#374151" stroke-width="1.5"/>
+  <text x="120" y="203" fill="#FFF" font-size="12" text-anchor="middle">🍷</text>
+  <text x="120" y="228" fill="#9CA3AF" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle">Wine</text>
+
+  <circle cx="180" cy="198" r="18" fill="url(#cardBg)" stroke="#374151" stroke-width="1.5"/>
+  <text x="180" y="203" fill="#FFF" font-size="12" text-anchor="middle">🦞</text>
+  <text x="180" y="228" fill="#9CA3AF" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle">Seafood</text>
+
+  <circle cx="240" cy="198" r="18" fill="url(#cardBg)" stroke="#374151" stroke-width="1.5"/>
+  <text x="240" y="203" fill="#FFF" font-size="12" text-anchor="middle">🍰</text>
+  <text x="240" y="228" fill="#9CA3AF" font-family="system-ui, sans-serif" font-size="9" text-anchor="middle">Dessert</text>
+
+  <!-- Dish Cards -->
+  <g transform="translate(24, 244)">
+    <rect width="268" height="114" rx="10" fill="url(#cardBg)" stroke="#2E323D" stroke-width="1"/>
+    <rect x="12" y="14" width="70" height="70" rx="8" fill="#2E323D"/>
+    <text x="47" y="55" font-size="28" text-anchor="middle">🥩</text>
+    <text x="94" y="32" fill="#FFFFFF" font-family="system-ui, serif" font-size="13" font-weight="bold">Prime Wagyu Ribeye</text>
+    <text x="94" y="50" fill="#9CA3AF" font-family="system-ui, sans-serif" font-size="10">Dry-aged 45 days, truffle butter</text>
+    <text x="94" y="80" fill="url(#gold)" font-family="system-ui, sans-serif" font-size="13" font-weight="bold">4,800 DZD</text>
+    <rect x="200" y="65" width="56" height="24" rx="6" fill="url(#gold)"/>
+    <text x="228" y="81" fill="#000000" font-family="system-ui, sans-serif" font-size="10" font-weight="bold" text-anchor="middle">+ Add</text>
+  </g>
+
+  <g transform="translate(308, 244)">
+    <rect width="268" height="114" rx="10" fill="url(#cardBg)" stroke="#2E323D" stroke-width="1"/>
+    <rect x="12" y="14" width="70" height="70" rx="8" fill="#2E323D"/>
+    <text x="47" y="55" font-size="28" text-anchor="middle">🍔</text>
+    <text x="94" y="32" fill="#FFFFFF" font-family="system-ui, serif" font-size="13" font-weight="bold">Truffle Black Angus</text>
+    <text x="94" y="50" fill="#9CA3AF" font-family="system-ui, sans-serif" font-size="10">Brioche bun, aged cheddar</text>
+    <text x="94" y="80" fill="url(#gold)" font-family="system-ui, sans-serif" font-size="13" font-weight="bold">2,200 DZD</text>
+    <rect x="200" y="65" width="56" height="24" rx="6" fill="url(#gold)"/>
+    <text x="228" y="81" fill="#000000" font-family="system-ui, sans-serif" font-size="10" font-weight="bold" text-anchor="middle">+ Add</text>
+  </g>
+</svg>
