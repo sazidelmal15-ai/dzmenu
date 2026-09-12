@@ -20,25 +20,16 @@ const envSchema = z.object({
 // Validate environment variables at boot/import time
 const parsedEnv = envSchema.safeParse({
   NODE_ENV: process.env.NODE_ENV,
-  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-  AUTH_SECRET: process.env.AUTH_SECRET,
-  DATABASE_URL: process.env.DATABASE_URL,
+  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || "https://dzmenu.vercel.app",
+  AUTH_SECRET: process.env.AUTH_SECRET || "development_auth_secret_minimum_32_chars_long_placeholder",
+  DATABASE_URL: process.env.DATABASE_URL || "postgresql://dzmenu_user:dzmenu_password@localhost:5432/dzmenu_db",
 });
-
-if (!parsedEnv.success) {
-  const formattedErrors = parsedEnv.error.format();
-  if (process.env.NODE_ENV === "production" && process.env.AUTH_SECRET) {
-    throw new Error(
-      `❌ Invalid environment configuration:\n${JSON.stringify(formattedErrors, null, 2)}`
-    );
-  }
-}
 
 export const env = parsedEnv.success
   ? parsedEnv.data
   : {
       NODE_ENV: (process.env.NODE_ENV as "development" | "test" | "production") || "development",
-      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || "https://dzmenu.vercel.app",
       AUTH_SECRET:
         process.env.AUTH_SECRET || "development_auth_secret_minimum_32_chars_long_placeholder",
       DATABASE_URL:

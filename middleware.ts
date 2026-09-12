@@ -30,9 +30,28 @@ function getTenantSubdomain(host: string): string | null {
     return null;
   }
 
-  // Production: *.dzmenu.com (e.g. salem.dzmenu.com)
-  if (hostname.endsWith(".dzmenu.com")) {
-    const sub = hostname.replace(".dzmenu.com", "").trim();
+  // Vercel preview/production domains: e.g. dzmenu.vercel.app
+  if (hostname.endsWith(".vercel.app")) {
+    const parts = hostname.split(".");
+    // <app-name>.vercel.app (3 parts) is the ROOT domain, NOT a tenant subdomain!
+    if (parts.length <= 3) {
+      return null;
+    }
+    // <subdomain>.<app-name>.vercel.app (4 parts)
+    const sub = parts[0].trim();
+    if (sub && !["www", "app", "admin", "api"].includes(sub)) {
+      return sub;
+    }
+    return null;
+  }
+
+  // Configured Root Domain (e.g. yourdomain.com or dzmenu.com)
+  const rootDomain = (process.env.NEXT_PUBLIC_ROOT_DOMAIN || "dzmenu.com").toLowerCase().trim();
+  if (rootDomain && (hostname === rootDomain || hostname === `www.${rootDomain}`)) {
+    return null;
+  }
+  if (rootDomain && hostname.endsWith("." + rootDomain)) {
+    const sub = hostname.replace("." + rootDomain, "").trim();
     if (sub && !["www", "app", "admin", "api"].includes(sub)) {
       return sub;
     }
@@ -43,7 +62,7 @@ function getTenantSubdomain(host: string): string | null {
   const parts = hostname.split(".");
   if (parts.length >= 3) {
     const sub = parts[0].trim();
-    if (sub && !["www", "app", "admin", "api"].includes(sub)) {
+    if (sub && !["www", "app", "admin", "api", "dzmenu"].includes(sub)) {
       return sub;
     }
   }
