@@ -19,6 +19,7 @@ import {
 import { AnimatePresence } from 'framer-motion';
 import { apiFetch } from '@/lib/api';
 import { formatPrice } from '@/lib/utils/currency';
+import { evaluateItemDiscount } from '@/lib/menu/discounts';
 import {
   type MenuItemBadge,
   type MenuItemTag,
@@ -527,96 +528,135 @@ export default function MenuPage({ initialCategories = [] }: { initialCategories
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F3F0E6]/60">
-                {paginatedItems.map((item: any) => (
-                  <tr key={item.id} className="hover:bg-[#FEF9EE]/30 transition-colors group">
-                    {/* Item Image + Title + Description */}
-                    <td className="py-3.5 pl-6 pr-4">
-                      <div className="flex items-center gap-3.5">
-                        <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 border border-[#F3F0E6]">
-                          {item.images?.[0] ? (
-                            <img src={getImageUrl(item.images[0].url)} alt={item.name} className="w-full h-full object-cover" />
-                          ) : item.imageUrl ? (
-                            <img src={getImageUrl(item.imageUrl)} alt={item.name} className="w-full h-full object-cover" />
+                {paginatedItems.map((item: any) => {
+                  const discountInfo = evaluateItemDiscount({
+                    price: Number(item.price) || 0,
+                    originalPrice: item.originalPrice,
+                    discountStartsAt: item.discountStartsAt,
+                    discountEndsAt: item.discountEndsAt,
+                  });
+                  const effectivePrice = discountInfo.isActive
+                    ? Number(item.price)
+                    : (discountInfo.originalPrice != null && discountInfo.originalPrice > Number(item.price)
+                        ? discountInfo.originalPrice
+                        : Number(item.price));
+
+                  return (
+                    <tr key={item.id} className="hover:bg-[#FEF9EE]/30 transition-colors group">
+                      {/* Item Image + Title + Description */}
+                      <td className="py-3.5 pl-6 pr-4">
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 border border-[#F3F0E6]">
+                            {item.images?.[0] ? (
+                              <img src={getImageUrl(item.images[0].url)} alt={item.name} className="w-full h-full object-cover" />
+                            ) : item.imageUrl ? (
+                              <img src={getImageUrl(item.imageUrl)} alt={item.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                <ImageIcon size={20} className="opacity-40" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-gray-900 text-[14.5px] leading-snug truncate group-hover:text-[#D97706] transition-colors">
+                              {item.name}
+                            </p>
+                            <p className="text-[12px] text-gray-400 truncate max-w-xs">
+                              {item.description || "No description provided"}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Category with dot */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full ${getCategoryDotColor(item.categoryName)}`} />
+                          <span className="text-[13.5px] font-medium text-gray-700">{item.categoryName || "General"}</span>
+                        </div>
+                      </td>
+
+                      {/* Price */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        {discountInfo.isActive ? (
+                          <div className="flex items-baseline gap-1.5">
+                            <span className="font-bold text-amber-600 text-[14.5px]">{formatPrice(item.price, currency)}</span>
+                            {discountInfo.originalPrice && (
+                              <span className="text-[11px] text-gray-400 line-through font-medium">
+                                {formatPrice(discountInfo.originalPrice, currency)}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="font-bold text-gray-900 text-[14.5px]">{formatPrice(effectivePrice, currency)}</span>
+                        )}
+                      </td>
+
+                      {/* Status Badge */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {discountInfo.isActive && discountInfo.percentage ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs">
+                              <span>-{discountInfo.percentage}% OFF</span>
+                            </span>
+                          ) : discountInfo.state === 'scheduled' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                              <span>⏳ Scheduled</span>
+                            </span>
+                          ) : discountInfo.state === 'expired' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-500 border border-gray-200">
+                              <span>⏸️ Expired</span>
+                            </span>
+                          ) : null}
+
+                          {item.badge && BADGE_DEFINITIONS[item.badge as MenuItemBadge] && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-xs">
+                              <span>{BADGE_DEFINITIONS[item.badge as MenuItemBadge].icon}</span>
+                              <span>{BADGE_DEFINITIONS[item.badge as MenuItemBadge].label}</span>
+                            </span>
+                          )}
+                          {item.isDeleted ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-50 text-red-600 border border-red-200/60">
+                              <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Deleted
+                            </span>
+                          ) : item.isVisible === false ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
+                              <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> Hidden
+                            </span>
+                          ) : !item.isAvailable ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200/60">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Unavailable
+                            </span>
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-gray-400">
-                              <ImageIcon size={20} className="opacity-40" />
-                            </div>
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Available
+                            </span>
                           )}
                         </div>
-                        <div className="min-w-0">
-                          <p className="font-bold text-gray-900 text-[14.5px] leading-snug truncate group-hover:text-[#D97706] transition-colors">
-                            {item.name}
-                          </p>
-                          <p className="text-[12px] text-gray-400 truncate max-w-xs">
-                            {item.description || "No description provided"}
-                          </p>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="py-3.5 pr-6 pl-4 whitespace-nowrap text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleEdit(item)}
+                            className="p-2 rounded-xl border border-[#F3F0E6] text-gray-600 hover:text-[#D97706] hover:border-amber-300 hover:bg-[#FEF9EE] transition shadow-sm cursor-pointer"
+                            title="Edit item"
+                          >
+                            <Edit3 size={15} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(item)}
+                            className="p-2 rounded-xl border border-[#F3F0E6] text-gray-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition shadow-sm cursor-pointer"
+                            title="Delete item permanently"
+                          >
+                            <Trash2 size={15} />
+                          </button>
                         </div>
-                      </div>
-                    </td>
-
-                    {/* Category with dot */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${getCategoryDotColor(item.categoryName)}`} />
-                        <span className="text-[13.5px] font-medium text-gray-700">{item.categoryName || "General"}</span>
-                      </div>
-                    </td>
-
-                    {/* Price */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <span className="font-bold text-gray-900 text-[14.5px]">{formatPrice(item.price, currency)}</span>
-                    </td>
-
-                    {/* Status Badge */}
-                    <td className="py-3.5 px-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        {item.badge && BADGE_DEFINITIONS[item.badge as MenuItemBadge] && (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-xs">
-                            <span>{BADGE_DEFINITIONS[item.badge as MenuItemBadge].icon}</span>
-                            <span>{BADGE_DEFINITIONS[item.badge as MenuItemBadge].label}</span>
-                          </span>
-                        )}
-                        {item.isDeleted ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-50 text-red-600 border border-red-200/60">
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Deleted
-                          </span>
-                        ) : item.isVisible === false ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> Hidden
-                          </span>
-                        ) : !item.isAvailable ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200/60">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Unavailable
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Available
-                          </span>
-                        )}
-                      </div>
-                    </td>
-
-                    {/* Actions */}
-                    <td className="py-3.5 pr-6 pl-4 whitespace-nowrap text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleEdit(item)}
-                          className="p-2 rounded-xl border border-[#F3F0E6] text-gray-600 hover:text-[#D97706] hover:border-amber-300 hover:bg-[#FEF9EE] transition shadow-sm cursor-pointer"
-                          title="Edit item"
-                        >
-                          <Edit3 size={15} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteClick(item)}
-                          className="p-2 rounded-xl border border-[#F3F0E6] text-gray-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition shadow-sm cursor-pointer"
-                          title="Delete item permanently"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -665,102 +705,138 @@ export default function MenuPage({ initialCategories = [] }: { initialCategories
       ) : (
         /* Grid Cards View */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
-          {displayItems.map((item: any) => (
-            <div
-              key={item.id}
-              className="bg-white rounded-[20px] border border-[#F3F0E6] shadow-sm hover:shadow-xl transition-shadow duration-200 flex flex-col overflow-hidden group"
-            >
-              <div className="relative aspect-[4/3] bg-gray-50 flex-shrink-0 overflow-hidden">
-                {item.images?.[0] ? (
-                  <img
-                    src={getImageUrl(item.images[0].url)}
-                    alt={item.name}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                ) : item.imageUrl ? (
-                  <img
-                    src={getImageUrl(item.imageUrl)}
-                    alt={item.name}
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
-                    <ImageIcon size={32} className="opacity-30 mb-2" />
-                  </div>
-                )}
-                {item.badge && BADGE_DEFINITIONS[item.badge as MenuItemBadge] ? (
-                  <div className="absolute top-3 left-3 bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1 z-10">
-                    <span>{BADGE_DEFINITIONS[item.badge as MenuItemBadge].icon}</span>
-                    <span>{BADGE_DEFINITIONS[item.badge as MenuItemBadge].label}</span>
-                  </div>
-                ) : null}
-              </div>
+          {displayItems.map((item: any) => {
+            const discountInfo = evaluateItemDiscount({
+              price: Number(item.price) || 0,
+              originalPrice: item.originalPrice,
+              discountStartsAt: item.discountStartsAt,
+              discountEndsAt: item.discountEndsAt,
+            });
+            const effectivePrice = discountInfo.isActive
+              ? Number(item.price)
+              : (discountInfo.originalPrice != null && discountInfo.originalPrice > Number(item.price)
+                  ? discountInfo.originalPrice
+                  : Number(item.price));
 
-              <div className="p-5 flex flex-col flex-1">
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-900 text-lg leading-tight mb-1">{item.name}</h3>
-                  <p className="text-[13px] font-medium text-gray-400 mb-2">{item.categoryName}</p>
-
-                  {Array.isArray(item.tags) && item.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {item.tags.map((t: string) => {
-                        const def = TAG_DEFINITIONS[t as MenuItemTag];
-                        if (!def) return null;
-                        return (
-                          <span
-                            key={t}
-                            className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-[#FAF9F5] border border-[#F3F0E6] text-gray-700 rounded-md text-[10px] font-medium"
-                          >
-                            <span>{def.icon}</span>
-                            <span>{def.label}</span>
-                          </span>
-                        );
-                      })}
+            return (
+              <div
+                key={item.id}
+                className="bg-white rounded-[20px] border border-[#F3F0E6] shadow-sm hover:shadow-xl transition-shadow duration-200 flex flex-col overflow-hidden group"
+              >
+                <div className="relative aspect-[4/3] bg-gray-50 flex-shrink-0 overflow-hidden">
+                  {item.images?.[0] ? (
+                    <img
+                      src={getImageUrl(item.images[0].url)}
+                      alt={item.name}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                  ) : item.imageUrl ? (
+                    <img
+                      src={getImageUrl(item.imageUrl)}
+                      alt={item.name}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                      <ImageIcon size={32} className="opacity-30 mb-2" />
                     </div>
                   )}
+                  {discountInfo.isActive && discountInfo.percentage ? (
+                    <div className="absolute top-3 left-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-black px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1 z-10">
+                      <span>-{discountInfo.percentage}% OFF</span>
+                    </div>
+                  ) : item.badge && BADGE_DEFINITIONS[item.badge as MenuItemBadge] ? (
+                    <div className="absolute top-3 left-3 bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1 z-10">
+                      <span>{BADGE_DEFINITIONS[item.badge as MenuItemBadge].icon}</span>
+                      <span>{BADGE_DEFINITIONS[item.badge as MenuItemBadge].label}</span>
+                    </div>
+                  ) : null}
                 </div>
 
-                <div className="flex items-center justify-between mb-4">
-                  <span className="font-black text-gray-900 text-lg">{formatPrice(item.price, currency)}</span>
+                <div className="p-5 flex flex-col flex-1">
+                  <div className="flex-1">
+                    <h3 className="font-bold text-gray-900 text-lg leading-tight mb-1">{item.name}</h3>
+                    <p className="text-[13px] font-medium text-gray-400 mb-2">{item.categoryName}</p>
 
-                  {item.isDeleted ? (
-                    <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-red-50 text-red-600 rounded-md">
-                      Deleted
-                    </span>
-                  ) : item.isVisible === false ? (
-                    <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-gray-100 text-gray-600 rounded-md">
-                      Hidden
-                    </span>
-                  ) : !item.isAvailable ? (
-                    <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200/60 rounded-md">
-                      Unavailable
-                    </span>
-                  ) : (
-                    <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-[#FEF9EE] text-[#D97706] border border-amber-200/60 rounded-md">
-                      Available
-                    </span>
-                  )}
-                </div>
+                    {Array.isArray(item.tags) && item.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mb-3">
+                        {item.tags.map((t: string) => {
+                          const def = TAG_DEFINITIONS[t as MenuItemTag];
+                          if (!def) return null;
+                          return (
+                            <span
+                              key={t}
+                              className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-[#FAF9F5] border border-[#F3F0E6] text-gray-700 rounded-md text-[10px] font-medium"
+                            >
+                              <span>{def.icon}</span>
+                              <span>{def.label}</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleEdit(item)}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-[#F3F0E6] hover:border-amber-400 hover:bg-[#FEF9EE]/50 hover:text-[#D97706] text-gray-700 text-sm font-semibold rounded-xl transition-colors cursor-pointer"
-                  >
-                    <Edit3 size={16} className="text-gray-400" /> Edit
-                  </button>
-                  <button
-                    onClick={() => handleDeleteClick(item)}
-                    className="w-10 flex items-center justify-center border border-[#F3F0E6] hover:border-red-300 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-xl transition-colors cursor-pointer"
-                    title="Delete item permanently"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                  <div className="flex items-center justify-between mb-4">
+                    {discountInfo.isActive ? (
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="font-black text-amber-600 text-lg">{formatPrice(item.price, currency)}</span>
+                        {discountInfo.originalPrice && (
+                          <span className="text-xs text-gray-400 line-through font-semibold">
+                            {formatPrice(discountInfo.originalPrice, currency)}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="font-black text-gray-900 text-lg">{formatPrice(effectivePrice, currency)}</span>
+                    )}
 
+                    {discountInfo.state === 'scheduled' ? (
+                      <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-md">
+                        Scheduled
+                      </span>
+                    ) : discountInfo.state === 'expired' ? (
+                      <span className="text-[11px] font-medium uppercase tracking-wider px-2.5 py-1 bg-gray-100 text-gray-500 border border-gray-200 rounded-md">
+                        Expired
+                      </span>
+                    ) : item.isDeleted ? (
+                      <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-red-50 text-red-600 rounded-md">
+                        Deleted
+                      </span>
+                    ) : item.isVisible === false ? (
+                      <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-gray-100 text-gray-600 rounded-md">
+                        Hidden
+                      </span>
+                    ) : !item.isAvailable ? (
+                      <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200/60 rounded-md">
+                        Unavailable
+                      </span>
+                    ) : (
+                      <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-[#FEF9EE] text-[#D97706] border border-amber-200/60 rounded-md">
+                        Available
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleEdit(item)}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-[#F3F0E6] hover:border-amber-400 hover:bg-[#FEF9EE]/50 hover:text-[#D97706] text-gray-700 text-sm font-semibold rounded-xl transition-colors cursor-pointer"
+                    >
+                      <Edit3 size={16} className="text-gray-400" /> Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteClick(item)}
+                      className="w-10 flex items-center justify-center border border-[#F3F0E6] hover:border-red-300 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-xl transition-colors cursor-pointer"
+                      title="Delete item permanently"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
