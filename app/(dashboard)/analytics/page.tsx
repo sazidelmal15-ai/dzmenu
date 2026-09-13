@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { BarChart2, TrendingUp, Users, Eye, Sparkles } from "lucide-react";
+import { ROUTES } from "@/constants/routes";
 
 export const metadata: Metadata = {
   title: "Analytics | DZMenu",
@@ -7,6 +9,13 @@ export const metadata: Metadata = {
 };
 
 export default function AnalyticsPage() {
+  // Analytics is temporarily disabled for restaurant users.
+  // Remove this redirect when the feature is ready to be re-enabled.
+  redirect(ROUTES.MENU);
+
+  // ── Implementation preserved below ──────────────────────────────────────────
+  // Everything below is intentionally unreachable until the redirect is removed.
+
   return (
     <div className="p-6 sm:p-8 max-w-7xl mx-auto space-y-6 font-sans">
       {/* Header Bar */}
