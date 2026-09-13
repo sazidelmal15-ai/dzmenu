@@ -28,6 +28,7 @@ import type { QrAnalyticsSummary } from "@/types/analytics";
 import { generateQrSvg, generateQrPngDataUrl, downloadFile } from "@/lib/qr/generator";
 import { buildTrackedMenuUrl } from "@/lib/analytics/urls";
 import { PrintableStandModal } from "@/components/qr-studio/PrintableStandModal";
+import { getTenantMenuUrl } from "@/lib/utils/domain";
 
 // Brand Color Palette Presets
 const COLOR_PRESETS = [
@@ -81,16 +82,7 @@ export default function QrStudioPage() {
 
   // Base URL calculation (Subdomain vs Localhost)
   const subdomainBaseUrl = useMemo(() => {
-    if (typeof window === "undefined") return "http://localhost:3000";
-    const host = window.location.host;
-    const protocol = window.location.protocol;
-
-    if (host.includes("localhost")) {
-      return `${protocol}//${restaurant.slug}.localhost:3000`;
-    }
-    // Production custom domain or subdomain
-    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "softscape.xyz";
-    return `${protocol}//${restaurant.slug}.${rootDomain}`;
+    return getTenantMenuUrl(restaurant.slug);
   }, [restaurant.slug]);
 
   // Universal QR Code URL (Instant 302 Bridge to clean /)

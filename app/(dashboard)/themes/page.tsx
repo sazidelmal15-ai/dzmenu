@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { RestaurantThemeRecord, ThemePresetId, ThemeSettingsV1 } from "@/types/theme-engine";
+import { getTenantMenuUrl, getTenantDisplayDomain } from "@/lib/utils/domain";
 
 interface PresetItem {
   presetId: ThemePresetId;
@@ -264,13 +265,7 @@ export default function ThemesPage() {
 
         <div className="flex items-center gap-2">
           <a
-            href={
-              restaurantSlug
-                ? typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname.endsWith(".localhost") || window.location.hostname === "127.0.0.1")
-                  ? `http://${restaurantSlug}.localhost:3000`
-                  : `https://${restaurantSlug}.dzmenu.com`
-                : "#"
-            }
+            href={getTenantMenuUrl(restaurantSlug)}
             target="_blank"
             rel="noopener noreferrer"
             className="px-3.5 py-1.5 bg-white hover:bg-[#F1F1F1] border border-[#D2D5D8] rounded-lg text-xs font-semibold text-[#202223] transition shadow-2xs flex items-center gap-1.5"
@@ -304,16 +299,7 @@ export default function ThemesPage() {
                 {/* Center: Exactly Centered Address Pill with Real Dev/Prod URL */}
                 <div className="absolute inset-x-0 mx-auto w-fit max-w-[260px] flex items-center justify-center pointer-events-none">
                   <a
-                    href={
-                      restaurantSlug
-                        ? typeof window !== "undefined" &&
-                          (window.location.hostname === "localhost" ||
-                            window.location.hostname.endsWith(".localhost") ||
-                            window.location.hostname === "127.0.0.1")
-                          ? `http://${restaurantSlug}.localhost:3000`
-                          : `https://${restaurantSlug}.dzmenu.com`
-                        : "#"
-                    }
+                    href={getTenantMenuUrl(restaurantSlug)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="pointer-events-auto bg-white hover:bg-gray-50 border border-[#E1E3E5] rounded-md px-2.5 py-0.5 text-[9px] text-gray-700 font-mono truncate flex items-center gap-1 shadow-2xs transition cursor-pointer"
@@ -321,14 +307,7 @@ export default function ThemesPage() {
                   >
                     <Lock size={8} className="text-emerald-600 shrink-0" />
                     <span className="truncate font-semibold">
-                      {restaurantSlug
-                        ? typeof window !== "undefined" &&
-                          (window.location.hostname === "localhost" ||
-                            window.location.hostname.endsWith(".localhost") ||
-                            window.location.hostname === "127.0.0.1")
-                          ? `${restaurantSlug}.localhost:3000`
-                          : `${restaurantSlug}.dzmenu.com`
-                        : "salem.localhost:3000"}
+                      {getTenantDisplayDomain(restaurantSlug)}
                     </span>
                     <ExternalLink size={8} className="text-gray-400 shrink-0 ml-0.5" />
                   </a>
