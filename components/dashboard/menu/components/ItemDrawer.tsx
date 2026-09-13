@@ -1,7 +1,21 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X, Trash2, Plus, GripVertical, Image as ImageIcon, Sparkles, Tag, Check } from 'lucide-react';
+import {
+  X,
+  Trash2,
+  Plus,
+  GripVertical,
+  Image as ImageIcon,
+  Sparkles,
+  Tag,
+  Check,
+  ChevronUp,
+  ChevronDown,
+  UtensilsCrossed,
+  Calendar,
+  Percent,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { apiFetch } from '@/lib/api';
 import {
@@ -12,6 +26,13 @@ import {
   BADGE_DEFINITIONS,
   TAG_DEFINITIONS,
 } from '@/types/menu';
+import {
+  calculateDiscountPercentage,
+  calculateSavings,
+  sanitizeIngredients,
+  formatDateTimeLocal,
+  parseDateTimeLocal,
+} from '@/lib/menu/discounts';
 
 interface Category {
   id: string;
@@ -42,6 +63,16 @@ export default function ItemDrawer({ isOpen, onClose, categories, initialData, o
   const [categoryId, setCategoryId] = useState('');
   const [price, setPrice] = useState('');
   const [description, setDescription] = useState('');
+
+  // Discounts & Promotions
+  const [originalPrice, setOriginalPrice] = useState('');
+  const [isTimedDiscount, setIsTimedDiscount] = useState(false);
+  const [discountStartsAt, setDiscountStartsAt] = useState('');
+  const [discountEndsAt, setDiscountEndsAt] = useState('');
+
+  // Reorderable Ingredients
+  const [ingredients, setIngredients] = useState<string[]>([]);
+  const [newIngredientInput, setNewIngredientInput] = useState('');
   
   // Badges & Dietary Tags
   const [badge, setBadge] = useState<MenuItemBadge | null>(null);
@@ -79,6 +110,13 @@ export default function ItemDrawer({ isOpen, onClose, categories, initialData, o
         setName(initialData.name || '');
         setCategoryId(initialData.categoryId || '');
         setPrice(initialData.price !== undefined ? initialData.price.toString() : '');
+        setOriginalPrice(initialData.originalPrice !== undefined && initialData.originalPrice !== null ? initialData.originalPrice.toString() : '');
+        const hasTimed = Boolean(initialData.discountStartsAt || initialData.discountEndsAt);
+        setIsTimedDiscount(hasTimed);
+        setDiscountStartsAt(initialData.discountStartsAt ? formatDateTimeLocal(initialData.discountStartsAt) : '');
+        setDiscountEndsAt(initialData.discountEndsAt ? formatDateTimeLocal(initialData.discountEndsAt) : '');
+        setIngredients(Array.isArray(initialData.ingredients) ? initialData.ingredients : []);
+        setNewIngredientInput('');
         setDescription(initialData.description || '');
         setIsVisible(initialData.isVisible !== undefined ? Boolean(initialData.isVisible) : (initialData.isAvailable !== undefined ? Boolean(initialData.isAvailable) : true));
         setImageOptimizationInfo(null);
@@ -148,6 +186,12 @@ export default function ItemDrawer({ isOpen, onClose, categories, initialData, o
         setName('');
         setCategoryId(categories.length > 0 ? categories[0].id : '');
         setPrice('');
+        setOriginalPrice('');
+        setIsTimedDiscount(false);
+        setDiscountStartsAt('');
+        setDiscountEndsAt('');
+        setIngredients([]);
+        setNewIngredientInput('');
         setDescription('');
         setBadge(null);
         setTags([]);
@@ -166,6 +210,47 @@ export default function ItemDrawer({ isOpen, onClose, categories, initialData, o
   }, [isOpen, initialData, categories]);
 
   if (!isOpen) return null;
+
+  const addIngredient = () => {
+    const trimmed = newIngredientInput.trim();
+    if (!trimmed) return;
+    setIngredients(prev => [...prev, trimmed]);
+    setNewIngredientInput('');
+  };
+
+  const removeIngredient = (index: number) => {
+    setIngredients(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const moveIngredientUp = (index: number) => {
+    if (index === 0) return;
+    setIngredients(prev => {
+      const next = [...prev];
+      const temp = next[index - 1];
+      next[index - 1] = next[index];
+      next[index] = temp;
+      return next;
+    });
+  };
+
+  const moveIngredientDown = (index: number) => {
+    if (index === ingredients.length - 1) return;
+    setIngredients(prev => {
+      const next = [...prev];
+      const temp = next[index + 1];
+      next[index + 1] = next[index];
+      next[index] = temp;
+      return next;
+    });
+  };
+
+  const updateIngredient = (index: number, val: string) => {
+    setIngredients(prev => {
+      const next = [...prev];
+      next[index] = val;
+      return next;
+    });
+  };
 
   const toggleTag = (tag: MenuItemTag) => {
     setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
@@ -269,15 +354,32 @@ export default function ItemDrawer({ isOpen, onClose, categories, initialData, o
         finalImageUrl = uploadData.data?.url || '';
       }
 
-      // 2. Build payload including imageUrl, badge, tags
+      // 2. Build payload including imageUrl, badge, tags, discounts, and ingredients
+      const parsedOriginalPrice = originalPrice ? parseInt(originalPrice, 10) : null;
+      if (parsedOriginalPrice && parsedOriginalPrice <= parsedPrice) {
+        throw new Error('Original price must be strictly greater than selling price.');
+      }
+
+      if (isTimedDiscount && discountStartsAt && discountEndsAt) {
+        const sTime = new Date(discountStartsAt).getTime();
+        const eTime = new Date(discountEndsAt).getTime();
+        if (!isNaN(sTime) && !isNaN(eTime) && sTime >= eTime) {
+          throw new Error('Discount start date/time must be before end date/time.');
+        }
+      }
+
       const payload = {
-        name,
-        description,
+        name: name.trim(),
+        description: description?.trim() || null,
         price: parsedPrice,
+        originalPrice: parsedOriginalPrice && parsedOriginalPrice > 0 ? parsedOriginalPrice : null,
+        discountStartsAt: isTimedDiscount && discountStartsAt ? parseDateTimeLocal(discountStartsAt) : null,
+        discountEndsAt: isTimedDiscount && discountEndsAt ? parseDateTimeLocal(discountEndsAt) : null,
         categoryId,
         imageUrl: finalImageUrl,
         badge: badge || null,
         tags,
+        ingredients: sanitizeIngredients(ingredients),
         isVisible,
         isAvailable: isVisible,
         isFeatured: Boolean(badge !== null),
@@ -367,11 +469,100 @@ export default function ItemDrawer({ isOpen, onClose, categories, initialData, o
                 </div>
 
                 <div>
-                  <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">Price <span className="text-red-500">*</span></label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">{currencySymbol}</span>
-                    <input type="number" step="1" min="0" value={price} onChange={e => setPrice(sanitizePrice(e.target.value))} onKeyDown={e => ['.',',','-','e','E','+'].includes(e.key) && e.preventDefault()} className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all" placeholder="500" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
+                        Selling Price <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">{currencySymbol}</span>
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={price}
+                          onChange={e => setPrice(sanitizePrice(e.target.value))}
+                          onKeyDown={e => ['.',',','-','e','E','+'].includes(e.key) && e.preventDefault()}
+                          className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
+                          placeholder="500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
+                        Original Price <span className="text-gray-400 font-normal text-xs">(Before Discount)</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">{currencySymbol}</span>
+                        <input
+                          type="number"
+                          step="1"
+                          min="0"
+                          value={originalPrice}
+                          onChange={e => setOriginalPrice(sanitizePrice(e.target.value))}
+                          onKeyDown={e => ['.',',','-','e','E','+'].includes(e.key) && e.preventDefault()}
+                          className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all placeholder:text-gray-400"
+                          placeholder="e.g. 650"
+                        />
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Live Discount Calculator Preview */}
+                  {originalPrice && price && parseInt(originalPrice, 10) > parseInt(price, 10) && (
+                    <div className="mt-2.5 p-2.5 bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border border-amber-300/60 rounded-xl flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-1.5 font-bold text-amber-900">
+                        <Percent size={13} className="text-amber-600" />
+                        <span>Discount Active: Save {calculateDiscountPercentage(parseInt(price, 10), parseInt(originalPrice, 10))}% ({calculateSavings(parseInt(price, 10), parseInt(originalPrice, 10))} {currencySymbol} off)</span>
+                      </div>
+                      <div className="font-semibold text-amber-800">
+                        <span className="line-through text-gray-400 mr-1.5">{parseInt(originalPrice, 10)} {currencySymbol}</span>
+                        <span className="font-bold text-amber-600">{parseInt(price, 10)} {currencySymbol}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Timed Discount Schedule Toggle */}
+                  {originalPrice && parseInt(originalPrice, 10) > parseInt(price, 10) && (
+                    <div className="mt-3 p-3 bg-gray-50/80 rounded-xl border border-gray-200/80 space-y-2.5">
+                      <label className="flex items-center justify-between cursor-pointer">
+                        <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                          <Calendar size={13} className="text-amber-500" />
+                          <span>Schedule Timed Discount Window (مؤقت زمني للخصم)</span>
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={isTimedDiscount}
+                          onChange={e => setIsTimedDiscount(e.target.checked)}
+                          className="rounded border-gray-300 text-amber-500 focus:ring-amber-400 cursor-pointer"
+                        />
+                      </label>
+
+                      {isTimedDiscount && (
+                        <div className="grid grid-cols-2 gap-2.5 pt-1 text-xs">
+                          <div>
+                            <label className="block text-[11px] font-bold text-gray-600 mb-1">Starts At (يبدأ في)</label>
+                            <input
+                              type="datetime-local"
+                              value={discountStartsAt}
+                              onChange={e => setDiscountStartsAt(e.target.value)}
+                              className="w-full px-2.5 py-1.5 bg-white border border-gray-300 rounded-lg text-xs text-gray-800 focus:ring-1 focus:ring-amber-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-gray-600 mb-1">Ends At (ينتهي في)</label>
+                            <input
+                              type="datetime-local"
+                              value={discountEndsAt}
+                              onChange={e => setDiscountEndsAt(e.target.value)}
+                              className="w-full px-2.5 py-1.5 bg-white border border-gray-300 rounded-lg text-xs text-gray-800 focus:ring-1 focus:ring-amber-500"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -422,6 +613,106 @@ export default function ItemDrawer({ isOpen, onClose, categories, initialData, o
               <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">Description</label>
               <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all resize-none placeholder:text-gray-400" placeholder="Premium vanilla ice cream made with real vanilla beans." />
             </div>
+          </div>
+
+          <hr className="border-gray-100 my-8" />
+
+          {/* Section: Reorderable Ingredients */}
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-1.5">
+              <UtensilsCrossed size={16} className="text-amber-500" />
+              <h3 className="text-base font-bold text-gray-900">Ingredients & Components (المقادير والمكونات)</h3>
+            </div>
+            <p className="text-xs text-gray-500 mb-4">
+              Add ingredients in your preferred order. Use the ⬆️ and ⬇️ buttons to arrange from first to last.
+            </p>
+
+            {/* Add Ingredient Input Box */}
+            <div className="flex gap-2 mb-3.5">
+              <input
+                type="text"
+                value={newIngredientInput}
+                onChange={e => setNewIngredientInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addIngredient();
+                  }
+                }}
+                className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 placeholder:text-gray-400 placeholder:font-normal"
+                placeholder="e.g. 180g Angus Beef Patty, Truffle Mayo, Aged Cheddar"
+              />
+              <button
+                type="button"
+                onClick={addIngredient}
+                disabled={!newIngredientInput.trim()}
+                className="px-4 py-2 bg-zinc-900 hover:bg-black text-white text-xs font-bold rounded-xl transition shadow-xs disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 cursor-pointer shrink-0"
+              >
+                <Plus size={14} />
+                <span>Add</span>
+              </button>
+            </div>
+
+            {/* Ingredients Reorderable List */}
+            {ingredients.length > 0 ? (
+              <div className="space-y-2 bg-gray-50/60 p-3 rounded-2xl border border-gray-100">
+                {ingredients.map((ing, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 bg-white p-2.5 rounded-xl border border-gray-200/80 shadow-2xs hover:border-gray-300 transition-all group"
+                  >
+                    {/* Index Badge */}
+                    <span className="w-5 h-5 rounded-full bg-amber-500/10 text-amber-800 text-[10px] font-black flex items-center justify-center shrink-0">
+                      {idx + 1}
+                    </span>
+
+                    {/* Editable Name */}
+                    <input
+                      type="text"
+                      value={ing}
+                      onChange={e => updateIngredient(idx, e.target.value)}
+                      className="flex-1 text-xs font-bold text-gray-800 bg-transparent focus:outline-none focus:bg-amber-50/40 px-2 py-1 rounded"
+                    />
+
+                    {/* Order Controls */}
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => moveIngredientUp(idx)}
+                        disabled={idx === 0}
+                        title="Move Up (تحريك للأعلى)"
+                        className="p-1 rounded-md text-gray-400 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer"
+                      >
+                        <ChevronUp size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveIngredientDown(idx)}
+                        disabled={idx === ingredients.length - 1}
+                        title="Move Down (تحريك للأسفل)"
+                        className="p-1 rounded-md text-gray-400 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer"
+                      >
+                        <ChevronDown size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeIngredient(idx)}
+                        title="Remove Ingredient (حذف)"
+                        className="p-1 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer ml-1"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl border border-dashed border-gray-200 text-center bg-gray-50/30">
+                <p className="text-xs text-gray-400 font-medium">
+                  No ingredients added yet. Add recipe ingredients to show customers the components in this dish.
+                </p>
+              </div>
+            )}
           </div>
 
           <hr className="border-gray-100 my-8" />

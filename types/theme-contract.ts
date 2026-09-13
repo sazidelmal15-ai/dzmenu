@@ -103,6 +103,12 @@ export interface MenuItemView {
   description: string | null;
   price: number;
   formattedPrice: string;
+  originalPrice?: number | null;
+  formattedOriginalPrice?: string | null;
+  hasActiveDiscount: boolean;
+  discountPercentage?: number | null;
+  discountStartsAt?: string | null;
+  discountEndsAt?: string | null;
   imageUrl: string | null;
   framing?: ImageFramingMetadata | null;
   isVisible: boolean;
@@ -115,6 +121,7 @@ export interface MenuItemView {
   badges: string[];
   badge?: string | null;
   tags?: string[];
+  ingredients: string[];
   dietary: MenuItemDietaryView;
 }
 

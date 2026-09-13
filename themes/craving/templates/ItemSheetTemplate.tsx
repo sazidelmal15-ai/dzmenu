@@ -162,14 +162,28 @@ export function CravingItemSheetTemplate({
         {/* Dish Title & Price */}
         <div className="flex items-start justify-between gap-3 mb-2">
           <h2
-            className="text-xl sm:text-2xl font-black text-[var(--dz-theme-text)] leading-tight tracking-tight"
+            className="text-xl sm:text-2xl font-black text-[var(--dz-theme-text)] leading-tight tracking-tight flex-1 break-words"
             style={{ fontFamily: "var(--dz-theme-font-serif)" }}
           >
             {selectedItem.name}
           </h2>
-          <span className="text-xl sm:text-2xl font-black text-[var(--dz-theme-accent)] whitespace-nowrap shrink-0">
-            {selectedItem.formattedPrice}
-          </span>
+          <div className="text-right shrink-0">
+            <div className="flex items-baseline gap-2 justify-end">
+              <span className="text-xl sm:text-2xl font-black text-[var(--dz-theme-accent)] whitespace-nowrap">
+                {selectedItem.formattedPrice}
+              </span>
+              {selectedItem.hasActiveDiscount && selectedItem.formattedOriginalPrice && (
+                <span className="text-sm text-[var(--dz-theme-muted)] line-through font-bold">
+                  {selectedItem.formattedOriginalPrice}
+                </span>
+              )}
+            </div>
+            {selectedItem.hasActiveDiscount && selectedItem.discountPercentage && (
+              <span className="inline-block mt-0.5 px-2 py-0.5 rounded-md bg-red-500 text-white text-[10px] font-black uppercase tracking-wider">
+                Save {selectedItem.discountPercentage}%
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Dietary Badges */}
@@ -202,11 +216,30 @@ export function CravingItemSheetTemplate({
           ))}
         </div>
 
-        {/* Description & Ingredients */}
+        {/* Description */}
         {selectedItem.description && (
-          <p className="text-xs sm:text-sm text-[var(--dz-theme-text)]/80 leading-relaxed mb-4 whitespace-pre-line break-words [overflow-wrap:anywhere]">
+          <p className="text-xs sm:text-sm text-[var(--dz-theme-text)]/80 leading-relaxed mb-3 whitespace-pre-line break-words [overflow-wrap:anywhere]">
             {selectedItem.description}
           </p>
+        )}
+
+        {/* Ingredients Chips (Ordered strictly by restaurant owner) */}
+        {selectedItem.ingredients && selectedItem.ingredients.length > 0 && (
+          <div className="mb-4 space-y-1.5 pt-2 border-t border-[var(--dz-theme-border)]">
+            <h3 className="text-xs font-black uppercase text-[var(--dz-theme-muted)] tracking-wider">
+              Ingredients
+            </h3>
+            <div className="flex flex-wrap gap-1.5">
+              {selectedItem.ingredients.map((ing, idx) => (
+                <span
+                  key={idx}
+                  className="px-2.5 py-1 rounded-xl bg-[var(--dz-theme-surface-raised)] border border-[var(--dz-theme-border)] text-xs font-bold text-[var(--dz-theme-text)] shadow-2xs"
+                >
+                  {ing}
+                </span>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Portion Sizes / Variants (if configured) */}

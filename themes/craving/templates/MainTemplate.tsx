@@ -623,10 +623,22 @@ export function CravingMainTemplate({
                               {dish.description}
                             </p>
                           )}
-                          <div className="pt-1 flex items-center justify-between">
-                            <span className="text-xs sm:text-sm font-black text-[var(--dz-theme-text)]">
-                              {dish.formattedPrice}
-                            </span>
+                          <div className="pt-1 flex items-center justify-between gap-1.5">
+                            <div className="flex items-baseline gap-1.5">
+                              <span className="text-xs sm:text-sm font-black text-[var(--dz-theme-text)]">
+                                {dish.formattedPrice}
+                              </span>
+                              {dish.hasActiveDiscount && dish.formattedOriginalPrice && (
+                                <span className="text-[10px] text-[var(--dz-theme-muted)] line-through font-bold">
+                                  {dish.formattedOriginalPrice}
+                                </span>
+                              )}
+                            </div>
+                            {dish.hasActiveDiscount && dish.discountPercentage && (
+                              <span className="px-1.5 py-0.5 rounded-md bg-red-500 text-white text-[9px] font-black tracking-tight shrink-0">
+                                -{dish.discountPercentage}%
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -716,9 +728,14 @@ export function CravingMainTemplate({
                     <span className="text-lg sm:text-xl font-black text-[var(--dz-theme-accent)]">
                       {todayDealDish.formattedPrice}
                     </span>
-                    {todayDealDish.price > 0 && (
-                      <span className="text-xs text-white/50 line-through font-bold">
-                        {Math.round(todayDealDish.price * 1.35)} {menu.restaurant.currencySymbol}
+                    {todayDealDish.hasActiveDiscount && todayDealDish.formattedOriginalPrice && (
+                      <span className="text-xs text-white/60 line-through font-bold">
+                        {todayDealDish.formattedOriginalPrice}
+                      </span>
+                    )}
+                    {todayDealDish.hasActiveDiscount && todayDealDish.discountPercentage && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-red-500 text-white text-[10px] font-black uppercase">
+                        -{todayDealDish.discountPercentage}%
                       </span>
                     )}
                   </div>
@@ -995,14 +1012,26 @@ export function CravingMainTemplate({
 
                       {/* Footer: Price & Quick Action */}
                       <div className="p-3 pt-0 flex items-center justify-between gap-1.5">
-                        <span
-                          className="text-xs sm:text-sm font-black text-[var(--dz-theme-accent)]"
-                          style={{ fontFamily: "var(--dz-theme-font-serif)" }}
-                        >
-                          {dish.formattedPrice}
-                        </span>
+                        <div className="flex items-baseline gap-1.5">
+                          <span
+                            className="text-xs sm:text-sm font-black text-[var(--dz-theme-accent)]"
+                            style={{ fontFamily: "var(--dz-theme-font-serif)" }}
+                          >
+                            {dish.formattedPrice}
+                          </span>
+                          {dish.hasActiveDiscount && dish.formattedOriginalPrice && (
+                            <span className="text-[10px] text-[var(--dz-theme-muted)] line-through font-bold">
+                              {dish.formattedOriginalPrice}
+                            </span>
+                          )}
+                        </div>
 
                         <div className="flex items-center gap-1">
+                          {dish.hasActiveDiscount && dish.discountPercentage && (
+                            <span className="px-1.5 py-0.5 rounded-md bg-red-500 text-white text-[9px] font-black">
+                              -{dish.discountPercentage}%
+                            </span>
+                          )}
                           {dish.dietary.isSpicy && (
                             <Flame className="w-3.5 h-3.5 text-red-500 fill-current" />
                           )}
@@ -1083,14 +1112,26 @@ export function CravingMainTemplate({
                         </div>
 
                         <div className="flex items-center justify-between gap-2 pt-2">
-                          <span
-                            className="text-sm sm:text-base font-black text-[var(--dz-theme-accent)]"
-                            style={{ fontFamily: "var(--dz-theme-font-serif)" }}
-                          >
-                            {dish.formattedPrice}
-                          </span>
+                          <div className="flex items-baseline gap-2">
+                            <span
+                              className="text-sm sm:text-base font-black text-[var(--dz-theme-accent)]"
+                              style={{ fontFamily: "var(--dz-theme-font-serif)" }}
+                            >
+                              {dish.formattedPrice}
+                            </span>
+                            {dish.hasActiveDiscount && dish.formattedOriginalPrice && (
+                              <span className="text-xs text-[var(--dz-theme-muted)] line-through font-bold">
+                                {dish.formattedOriginalPrice}
+                              </span>
+                            )}
+                          </div>
 
                           <div className="flex items-center gap-2">
+                            {dish.hasActiveDiscount && dish.discountPercentage && (
+                              <span className="px-1.5 py-0.5 rounded-md bg-red-500 text-white text-[10px] font-black">
+                                -{dish.discountPercentage}%
+                              </span>
+                            )}
                             {dish.dietary.isSpicy && (
                               <Flame className="w-3.5 h-3.5 text-red-500 fill-current" />
                             )}
@@ -1198,9 +1239,16 @@ export function CravingMainTemplate({
                           {dish.description}
                         </p>
                       )}
-                      <span className="text-xs font-black text-[var(--dz-theme-accent)] mt-1 block">
-                        {dish.formattedPrice}
-                      </span>
+                      <div className="flex items-baseline gap-2 mt-1">
+                        <span className="text-xs font-black text-[var(--dz-theme-accent)]">
+                          {dish.formattedPrice}
+                        </span>
+                        {dish.hasActiveDiscount && dish.formattedOriginalPrice && (
+                          <span className="text-[10px] text-[var(--dz-theme-muted)] line-through font-bold">
+                            {dish.formattedOriginalPrice}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))

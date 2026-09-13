@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/context";
 import { restaurantQueries, menuItemQueries } from "@/lib/db/queries";
 import { deleteStorageFile } from "@/lib/storage";
+import { menuItemUpdateSchema } from "@/lib/menu/discounts";
 
 export const dynamic = "force-dynamic";
 
@@ -22,27 +23,74 @@ export async function PATCH(
       return NextResponse.json({ message: "No restaurant found" }, { status: 400 });
     }
 
-    const body = await request.json();
+    // Verify tenant ownership of this item
+    const existing = await menuItemQueries.findById(id, restaurant.id);
+    if (!existing) {
+      return NextResponse.json({ message: "Menu item not found or unauthorized" }, { status: 404 });
+    }
 
-    if (body.isDeleted === true) {
+    const rawBody = await request.json();
+
+    if (rawBody.isDeleted === true) {
       await menuItemQueries.softDelete(id, restaurant.id);
       return NextResponse.json({ data: { id, isDeleted: true } });
     }
 
+    // Server-Side Zod Validation
+    const parseResult = menuItemUpdateSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        {
+          message: "Validation failed",
+          errors: parseResult.error.flatten(),
+        },
+        { status: 400 }
+      );
+    }
+
+    const data = parseResult.data;
+
+    // Cross-field boundary validation against merged current state
+    const effectivePrice = data.price !== undefined ? data.price : Number(existing.price);
+    const effectiveOriginal =
+      data.originalPrice !== undefined
+        ? data.originalPrice
+        : existing.originalPrice != null
+        ? Number(existing.originalPrice)
+        : null;
+
+    if (effectiveOriginal != null && effectiveOriginal <= effectivePrice) {
+      return NextResponse.json(
+        {
+          message: "Validation failed",
+          errors: {
+            fieldErrors: {
+              originalPrice: ["Original price must be strictly greater than selling price"],
+            },
+          },
+        },
+        { status: 400 }
+      );
+    }
+
     const updated = await menuItemQueries.update(id, restaurant.id, {
-      categoryId: body.categoryId,
-      name: body.name,
-      description: body.description,
-      price: body.price !== undefined ? Number(body.price) : undefined,
-      imageUrl: body.imageUrl,
-      badge: body.badge,
-      tags: body.tags,
-      isVisible: body.isVisible,
-      isAvailable: body.isAvailable,
-      isFeatured: body.isFeatured,
-      variants: body.variants,
-      sizes: body.sizes,
-      extras: body.extras,
+      categoryId: data.categoryId,
+      name: data.name,
+      description: data.description,
+      price: data.price,
+      originalPrice: data.originalPrice,
+      discountStartsAt: data.discountStartsAt,
+      discountEndsAt: data.discountEndsAt,
+      imageUrl: data.imageUrl,
+      badge: data.badge,
+      tags: data.tags,
+      ingredients: data.ingredients,
+      isVisible: data.isVisible,
+      isAvailable: data.isAvailable,
+      isFeatured: data.isFeatured,
+      variants: data.variants,
+      sizes: data.sizes,
+      extras: data.extras,
     });
 
     return NextResponse.json({ data: updated });

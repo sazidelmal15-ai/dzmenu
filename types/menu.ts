@@ -107,9 +107,13 @@ export interface MenuItem {
   name: string;
   description: string | null;
   price: number;
+  originalPrice?: number | null;
+  discountStartsAt?: string | Date | null;
+  discountEndsAt?: string | Date | null;
   imageUrl: string | null;
   badge?: MenuItemBadge | null;
   tags?: MenuItemTag[];
+  ingredients: string[];
   isVisible: boolean;
   isAvailable: boolean;
   isFeatured: boolean;

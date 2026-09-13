@@ -60,6 +60,9 @@ export function GourmetItemSheetTemplate({
   };
 
   const ingredientsList = useMemo(() => {
+    if (selectedItem?.ingredients && selectedItem.ingredients.length > 0) {
+      return selectedItem.ingredients;
+    }
     if (!selectedItem?.description) return [];
     const text = selectedItem.description;
     if (text.includes("•")) {
@@ -133,17 +136,31 @@ export function GourmetItemSheetTemplate({
         {/* Dish Title & Price */}
         <div className="flex justify-between items-start gap-4 mb-2">
           <h2
-            className="text-xl sm:text-2xl font-serif text-[var(--dz-theme-text)]"
+            className="text-xl sm:text-2xl font-serif text-[var(--dz-theme-text)] flex-1 break-words"
             style={{ fontFamily: "var(--dz-theme-font-serif)" }}
           >
             {selectedItem.name}
           </h2>
-          <span
-            className="text-lg font-serif font-semibold text-[var(--dz-theme-text)] shrink-0"
-            style={{ fontFamily: "var(--dz-theme-font-serif)" }}
-          >
-            {selectedItem.formattedPrice}
-          </span>
+          <div className="text-right shrink-0">
+            <div className="flex items-baseline gap-2 justify-end">
+              <span
+                className="text-lg sm:text-xl font-serif font-semibold text-[var(--dz-theme-text)]"
+                style={{ fontFamily: "var(--dz-theme-font-serif)" }}
+              >
+                {selectedItem.formattedPrice}
+              </span>
+              {selectedItem.hasActiveDiscount && selectedItem.formattedOriginalPrice && (
+                <span className="text-xs text-[var(--dz-theme-muted)] line-through font-semibold">
+                  {selectedItem.formattedOriginalPrice}
+                </span>
+              )}
+            </div>
+            {selectedItem.hasActiveDiscount && selectedItem.discountPercentage && (
+              <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full bg-red-600 text-white text-[9px] font-serif font-semibold uppercase tracking-wider">
+                -{selectedItem.discountPercentage}%
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Dietary Badges */}

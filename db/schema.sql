@@ -241,6 +241,9 @@ CREATE TABLE IF NOT EXISTS menu_items (
     name          VARCHAR(255)    NOT NULL,
     description   TEXT            NULL,
     price         NUMERIC(10, 2)  NOT NULL DEFAULT 0,
+    original_price NUMERIC(10, 2) NULL,
+    discount_starts_at TIMESTAMPTZ NULL,
+    discount_ends_at   TIMESTAMPTZ NULL,
     image_url     TEXT            NULL,
 
     -- Display Settings & Merchandising
@@ -248,6 +251,8 @@ CREATE TABLE IF NOT EXISTS menu_items (
     -- e.g. 'CHEF_PICK', 'BEST_SELLER', 'NEW', 'SIGNATURE', 'SPECIAL_OFFER'
     tags          JSONB           NOT NULL DEFAULT '[]'::jsonb,
     -- e.g. ["spicy", "vegetarian", "vegan", "gluten_free", "nuts"]
+    ingredients   JSONB           NOT NULL DEFAULT '[]'::jsonb,
+    -- e.g. ["Angus Beef 180g", "Aged Cheddar", "Truffle Mayo"] in presentation order
     is_visible    BOOLEAN         NOT NULL DEFAULT TRUE,
     -- TRUE = shown to customers | FALSE = hidden
     is_available  BOOLEAN         NOT NULL DEFAULT TRUE,
@@ -283,11 +288,15 @@ ALTER TABLE categories ADD COLUMN IF NOT EXISTS is_active   BOOLEAN       NOT NU
 ALTER TABLE categories ADD COLUMN IF NOT EXISTS deleted_at  TIMESTAMPTZ   NULL;
 
 -- menu_items: display-control & merchandising columns added in v2.0
-ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS badge        VARCHAR(50)  NULL;
-ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS tags         JSONB        NOT NULL DEFAULT '[]'::jsonb;
-ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS is_visible   BOOLEAN      NOT NULL DEFAULT TRUE;
-ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS is_available BOOLEAN      NOT NULL DEFAULT TRUE;
-ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS is_featured  BOOLEAN      NOT NULL DEFAULT FALSE;
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS original_price      NUMERIC(10, 2) NULL;
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS discount_starts_at  TIMESTAMPTZ    NULL;
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS discount_ends_at    TIMESTAMPTZ    NULL;
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS ingredients         JSONB          NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS badge               VARCHAR(50)    NULL;
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS tags                JSONB          NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS is_visible          BOOLEAN        NOT NULL DEFAULT TRUE;
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS is_available        BOOLEAN        NOT NULL DEFAULT TRUE;
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS is_featured         BOOLEAN        NOT NULL DEFAULT FALSE;
 
 -- menu_items: JSONB modifier columns
 ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS variants JSONB NOT NULL DEFAULT '[]'::jsonb;

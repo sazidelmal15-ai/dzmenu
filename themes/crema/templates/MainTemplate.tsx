@@ -812,12 +812,22 @@ export function CremaMainTemplate({
                             className="flex items-center justify-between gap-1.5 mt-2.5 pt-1.5 border-t"
                             style={{ borderColor: "var(--dz-theme-border)" }}
                           >
-                            <span
-                              className="text-xs sm:text-sm font-bold tracking-tight truncate flex-1 min-w-0"
-                              style={{ color: "var(--dz-theme-price)" }}
-                            >
-                              {Number(item.price).toLocaleString()} {menu.restaurant.currency}
-                            </span>
+                            <div className="flex items-baseline gap-1.5 min-w-0 flex-1">
+                              <span
+                                className="text-xs sm:text-sm font-bold tracking-tight truncate"
+                                style={{ color: "var(--dz-theme-price)" }}
+                              >
+                                {item.formattedPrice || `${Number(item.price).toLocaleString()} ${menu.restaurant.currency}`}
+                              </span>
+                              {item.hasActiveDiscount && item.formattedOriginalPrice && (
+                                <span
+                                  className="text-[10px] line-through font-medium truncate shrink-0"
+                                  style={{ color: "var(--dz-theme-muted)" }}
+                                >
+                                  {item.formattedOriginalPrice}
+                                </span>
+                              )}
+                            </div>
 
                             {/* Heart Like / Favorite Button */}
                             <button

@@ -210,7 +210,8 @@ export function CremaItemSheetTemplate({
     dietary.isGlutenFree ||
     dietary.isSpicy;
 
-  const hasExtraDetails = hasSizes || hasVariants || hasExtras || hasDietary;
+  const hasIngredients = Array.isArray(selectedItem.ingredients) && selectedItem.ingredients.length > 0;
+  const hasExtraDetails = hasSizes || hasVariants || hasExtras || hasDietary || hasIngredients;
 
   return (
     <div className="absolute inset-0 z-50 flex items-end justify-center select-none overflow-hidden">
@@ -377,18 +378,35 @@ export function CremaItemSheetTemplate({
 
           <div className="flex items-start justify-between gap-4 mt-0.5">
             <h2
-              className="text-lg sm:text-xl font-serif font-bold tracking-tight leading-tight"
+              className="text-lg sm:text-xl font-serif font-bold tracking-tight leading-tight flex-1 break-words"
               style={{ color: "var(--dz-theme-text)" }}
             >
               {selectedItem.name}
             </h2>
 
-            <span
-              className="text-base sm:text-lg font-serif font-bold whitespace-nowrap tracking-tight"
-              style={{ color: "var(--dz-theme-price)" }}
-            >
-              {Number(selectedItem.price).toLocaleString()} {menu.restaurant.currency}
-            </span>
+            <div className="text-right shrink-0">
+              <div className="flex items-baseline gap-1.5 justify-end">
+                <span
+                  className="text-base sm:text-lg font-serif font-bold whitespace-nowrap tracking-tight"
+                  style={{ color: "var(--dz-theme-price)" }}
+                >
+                  {selectedItem.formattedPrice || `${Number(selectedItem.price).toLocaleString()} ${menu.restaurant.currency}`}
+                </span>
+                {selectedItem.hasActiveDiscount && selectedItem.formattedOriginalPrice && (
+                  <span
+                    className="text-xs line-through font-medium"
+                    style={{ color: "var(--dz-theme-muted)" }}
+                  >
+                    {selectedItem.formattedOriginalPrice}
+                  </span>
+                )}
+              </div>
+              {selectedItem.hasActiveDiscount && selectedItem.discountPercentage && (
+                <span className="inline-block mt-0.5 px-2 py-0.5 rounded-full bg-rose-600 text-white text-[9px] font-bold uppercase tracking-wider">
+                  -{selectedItem.discountPercentage}%
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -515,6 +533,33 @@ export function CremaItemSheetTemplate({
                             )}
                           </>
                         )}
+                  </div>
+                </div>
+              )}
+
+              {/* Ordered Ingredients Section */}
+              {hasIngredients && (
+                <div>
+                  <h4
+                    className="text-xs font-serif font-bold tracking-wider uppercase mb-2"
+                    style={{ color: "var(--dz-theme-accent)" }}
+                  >
+                    Ingredients
+                  </h4>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {selectedItem.ingredients.map((ing, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border"
+                        style={{
+                          backgroundColor: "var(--dz-theme-surface-raised)",
+                          borderColor: "var(--dz-theme-border)",
+                          color: "var(--dz-theme-text)",
+                        }}
+                      >
+                        {ing}
+                      </span>
+                    ))}
                   </div>
                 </div>
               )}

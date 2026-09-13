@@ -269,11 +269,30 @@ export function calculateScheduleStatus(
   };
 }
 
+import { evaluateItemDiscount, sanitizeIngredients } from "@/lib/menu/discounts";
+
 /**
  * Transforms a raw MenuItem into a decoupled MenuItemView.
  */
 export function mapItemToView(item: MenuItem, currency: string, locale: string): MenuItemView {
   const { badges, dietary } = extractDietaryAndBadges(item);
+
+  const price = Number(item.price) || 0;
+  
+  // Use centralized domain calculation for discount state derivation
+  const discountInfo = evaluateItemDiscount({
+    price,
+    originalPrice: item.originalPrice,
+    discountStartsAt: item.discountStartsAt,
+    discountEndsAt: item.discountEndsAt,
+  });
+
+  const formattedOriginalPrice =
+    discountInfo.isActive && discountInfo.originalPrice != null
+      ? formatPrice(discountInfo.originalPrice, currency, locale)
+      : null;
+
+  const ingredients = sanitizeIngredients(item.ingredients);
 
   return {
     id: item.id,
@@ -281,8 +300,14 @@ export function mapItemToView(item: MenuItem, currency: string, locale: string):
     categoryName: item.categoryName ?? null,
     name: item.name,
     description: item.description ?? null,
-    price: Number(item.price) || 0,
-    formattedPrice: formatPrice(Number(item.price) || 0, currency, locale),
+    price,
+    formattedPrice: formatPrice(price, currency, locale),
+    originalPrice: discountInfo.originalPrice,
+    formattedOriginalPrice,
+    hasActiveDiscount: discountInfo.isActive,
+    discountPercentage: discountInfo.percentage,
+    discountStartsAt: discountInfo.startsAt,
+    discountEndsAt: discountInfo.endsAt,
     imageUrl: item.imageUrl ?? null,
     isVisible: item.isVisible ?? true,
     isAvailable: item.isAvailable ?? true,
@@ -310,6 +335,7 @@ export function mapItemToView(item: MenuItem, currency: string, locale: string):
     badges,
     badge: item.badge || null,
     tags: Array.isArray(item.tags) ? item.tags : [],
+    ingredients,
     dietary,
   };
 }

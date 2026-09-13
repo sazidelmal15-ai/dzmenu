@@ -84,6 +84,9 @@ export function GourmetItemPageTemplate({
 
   // Extract ingredients list from description if available
   const ingredientsList = useMemo(() => {
+    if (selectedItem?.ingredients && selectedItem.ingredients.length > 0) {
+      return selectedItem.ingredients;
+    }
     if (!selectedItem?.description) return [];
     // If description contains commas or bullet points, split into list items
     const text = selectedItem.description;
@@ -207,12 +210,26 @@ export function GourmetItemPageTemplate({
             >
               {selectedItem.name}
             </h1>
-            <span
-              className="text-xl sm:text-2xl font-serif text-[var(--dz-theme-text)] font-semibold shrink-0 tracking-tight"
-              style={{ fontFamily: "var(--dz-theme-font-serif)" }}
-            >
-              {selectedItem.formattedPrice}
-            </span>
+            <div className="text-right shrink-0">
+              <div className="flex items-baseline gap-2 justify-end">
+                <span
+                  className="text-xl sm:text-2xl font-serif text-[var(--dz-theme-text)] font-semibold tracking-tight"
+                  style={{ fontFamily: "var(--dz-theme-font-serif)" }}
+                >
+                  {selectedItem.formattedPrice}
+                </span>
+                {selectedItem.hasActiveDiscount && selectedItem.formattedOriginalPrice && (
+                  <span className="text-sm text-[var(--dz-theme-muted)] line-through font-medium">
+                    {selectedItem.formattedOriginalPrice}
+                  </span>
+                )}
+              </div>
+              {selectedItem.hasActiveDiscount && selectedItem.discountPercentage && (
+                <span className="inline-block mt-0.5 px-2.5 py-0.5 rounded-full bg-red-600 text-white text-[10px] font-serif font-semibold tracking-wider">
+                  Save {selectedItem.discountPercentage}%
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Subtitle / Key Ingredients row */}

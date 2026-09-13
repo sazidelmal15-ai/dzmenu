@@ -811,19 +811,33 @@ export function GourmetMainTemplate({
 
                           {/* Bottom Row: Price & Leaf / Dietary */}
                           <div className="px-3 pb-3 pt-1 flex items-center justify-between border-t border-[var(--dz-theme-border)]/40 mt-1">
-                            <span
-                              className="text-xs sm:text-sm font-serif font-semibold text-[var(--dz-theme-text)]"
-                              style={{ fontFamily: "var(--dz-theme-font-serif)" }}
-                            >
-                              {dish.formattedPrice}
-                            </span>
-                            {dish.dietary.isVegetarian ? (
-                              <Leaf className="w-3.5 h-3.5 text-emerald-600" />
-                            ) : dish.dietary.isSpicy ? (
-                              <Flame className="w-3.5 h-3.5 text-red-500" />
-                            ) : (
-                              <Sparkles className="w-3.5 h-3.5 text-[var(--dz-theme-accent)]" />
-                            )}
+                            <div className="flex items-baseline gap-1.5">
+                              <span
+                                className="text-xs sm:text-sm font-serif font-semibold text-[var(--dz-theme-text)]"
+                                style={{ fontFamily: "var(--dz-theme-font-serif)" }}
+                              >
+                                {dish.formattedPrice}
+                              </span>
+                              {dish.hasActiveDiscount && dish.formattedOriginalPrice && (
+                                <span className="text-[10px] text-[var(--dz-theme-muted)] line-through">
+                                  {dish.formattedOriginalPrice}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {dish.hasActiveDiscount && dish.discountPercentage && (
+                                <span className="px-1.5 py-0.5 rounded-md bg-red-600 text-white text-[9px] font-bold">
+                                  -{dish.discountPercentage}%
+                                </span>
+                              )}
+                              {dish.dietary.isVegetarian ? (
+                                <Leaf className="w-3.5 h-3.5 text-emerald-600" />
+                              ) : dish.dietary.isSpicy ? (
+                                <Flame className="w-3.5 h-3.5 text-red-500" />
+                              ) : (
+                                <Sparkles className="w-3.5 h-3.5 text-[var(--dz-theme-accent)]" />
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -870,12 +884,19 @@ export function GourmetMainTemplate({
                             >
                               {dish.name}
                             </h4>
-                            <p
-                              className="text-[11px] font-serif font-semibold text-[var(--dz-theme-accent)] mt-0.5"
-                              style={{ fontFamily: "var(--dz-theme-font-serif)" }}
-                            >
-                              {dish.formattedPrice}
-                            </p>
+                            <div className="flex items-baseline gap-1.5 mt-0.5">
+                              <p
+                                className="text-[11px] font-serif font-semibold text-[var(--dz-theme-accent)]"
+                                style={{ fontFamily: "var(--dz-theme-font-serif)" }}
+                              >
+                                {dish.formattedPrice}
+                              </p>
+                              {dish.hasActiveDiscount && dish.formattedOriginalPrice && (
+                                <span className="text-[9px] text-[var(--dz-theme-muted)] line-through">
+                                  {dish.formattedOriginalPrice}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
@@ -1786,14 +1807,26 @@ function DishHorizontalCard({
         </div>
 
         <div className="flex items-center justify-between gap-2 pt-2">
-          <span
-            className="text-xs sm:text-sm font-serif font-semibold text-[var(--dz-theme-text)]"
-            style={{ fontFamily: "var(--dz-theme-font-serif)" }}
-          >
-            {dish.formattedPrice}
-          </span>
+          <div className="flex items-baseline gap-1.5">
+            <span
+              className="text-xs sm:text-sm font-serif font-semibold text-[var(--dz-theme-text)]"
+              style={{ fontFamily: "var(--dz-theme-font-serif)" }}
+            >
+              {dish.formattedPrice}
+            </span>
+            {dish.hasActiveDiscount && dish.formattedOriginalPrice && (
+              <span className="text-[10px] text-[var(--dz-theme-muted)] line-through">
+                {dish.formattedOriginalPrice}
+              </span>
+            )}
+          </div>
 
           <div className="flex items-center gap-1.5">
+            {dish.hasActiveDiscount && dish.discountPercentage && (
+              <span className="px-1.5 py-0.5 rounded-md bg-red-600 text-white text-[9px] font-bold">
+                -{dish.discountPercentage}%
+              </span>
+            )}
             {dish.badge ? (
               <span className="text-[10px] font-serif text-[var(--dz-theme-accent)] uppercase tracking-wider font-medium">
                 {formatBadgeLabel(dish.badge)}
