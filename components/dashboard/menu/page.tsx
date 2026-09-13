@@ -26,11 +26,8 @@ import {
   BADGE_DEFINITIONS,
   TAG_DEFINITIONS,
 } from '@/types/menu';
-import dynamic from 'next/dynamic';
-
-// Code-split heavy drawers to keep initial bundle ultra-light and fast
-const ItemDrawer = dynamic(() => import('./components/ItemDrawer'), { ssr: false });
-const CategoryDrawer = dynamic(() => import('./components/CategoryDrawer'), { ssr: false });
+import ItemDrawer from './components/ItemDrawer';
+import CategoryDrawer from './components/CategoryDrawer';
 
 // Global in-memory cache for instant 0ms page transitions
 let inMemoryCategoriesCache: any[] | null = null;
