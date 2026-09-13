@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  BarChart2,
+  // BarChart2, // Analytics — hidden for now, re-enable when ready
   UtensilsCrossed,
   Palette,
   QrCode,
@@ -28,12 +28,13 @@ export function Sidebar({ restaurant, user }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   const navItems = [
-    {
-      label: "Analytics",
-      href: "/analytics",
-      icon: BarChart2,
-      active: pathname === "/analytics" || pathname.startsWith("/analytics"),
-    },
+    // Analytics — hidden from sidebar for now. Route, DB tables, and implementation intact.
+    // {
+    //   label: "Analytics",
+    //   href: "/analytics",
+    //   icon: BarChart2,
+    //   active: pathname === "/analytics" || pathname.startsWith("/analytics"),
+    // },
     {
       label: "Menu",
       href: "/menu",
