@@ -232,12 +232,8 @@ export function GourmetItemPageTemplate({
             </div>
           </div>
 
-          {/* Subtitle / Key Ingredients row */}
-          {ingredientsList.length > 0 && (
-            <p className="text-xs sm:text-sm text-[var(--dz-theme-muted)] tracking-wide leading-relaxed break-words [overflow-wrap:anywhere]">
-              {ingredientsList.join(" • ")}
-            </p>
-          )}
+
+
 
           {/* Full Narrative Description */}
           {selectedItem.description && (
