@@ -27,7 +27,6 @@ import { sanitizeThemeForCss } from "@/lib/themes/sanitizer";
 import { DynamicControlsEngine } from "@/components/theme-editor/DynamicControlsEngine";
 import { useThemePackage } from "@/hooks/useThemePackage";
 import type { ThemePackage } from "@/types/theme-contract";
-import { getTenantMenuUrl, getTenantDisplayDomain } from "@/lib/utils/domain";
 
 function isDeepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
@@ -586,7 +585,13 @@ export default function ThemeEditorClient({
                   className="absolute right-0 mt-1.5 w-48 bg-[#242424] border border-[#383838] rounded-xl shadow-2xl p-1 z-50 text-xs text-gray-300"
                 >
                   <a
-                    href={getTenantMenuUrl(restaurant.slug)}
+                    href={
+                      typeof window !== "undefined" &&
+                      (window.location.hostname === "localhost" ||
+                        window.location.hostname.endsWith(".localhost"))
+                        ? `http://${restaurant.slug}.localhost:3000`
+                        : `https://${restaurant.slug}.dzmenu.com`
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-[#333333] hover:text-white transition"
@@ -818,7 +823,12 @@ export default function ThemeEditorClient({
                     <div className="bg-[#141517] border border-[#2D2E30] rounded-md px-3 py-1 text-[11px] text-gray-400 font-mono text-center truncate flex items-center justify-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                       <span suppressHydrationWarning>
-                        {isMounted ? getTenantDisplayDomain(restaurant.slug) : "..."}
+                        {isMounted &&
+                        typeof window !== "undefined" &&
+                        (window.location.hostname === "localhost" ||
+                          window.location.hostname.endsWith(".localhost"))
+                          ? `${restaurant.slug}.localhost:3000`
+                          : `${restaurant.slug}.dzmenu.com`}
                       </span>
                     </div>
                   </div>

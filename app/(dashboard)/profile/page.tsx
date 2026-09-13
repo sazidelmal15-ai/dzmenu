@@ -30,7 +30,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { parseSocialLink } from "@/lib/utils/social-verifier";
-import { getTenantMenuUrl, getTenantDisplayDomain, getRootDomain } from "@/lib/utils/domain";
 
 /**
  * Compresses an uploaded image file on the client-side and returns a compact base64 Data URL.
@@ -391,7 +390,10 @@ export default function RestaurantProfilePage() {
   }, [inputSubdomain, isSubdomainLocked]);
 
   const getMenuUrl = (subdomain: string) => {
-    return getTenantMenuUrl(subdomain);
+    if (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname.endsWith(".localhost") || window.location.hostname === "127.0.0.1")) {
+      return `http://${subdomain}.localhost:3000`;
+    }
+    return `https://${subdomain}.dzmenu.com`;
   };
 
   const handleCopySubdomain = () => {
@@ -445,7 +447,7 @@ export default function RestaurantProfilePage() {
         ...prev,
         inputSubdomain: confirmed,
       }));
-      showToast(`🔒 Menu link locked: ${getTenantDisplayDomain(confirmed)}`, "success", 4000);
+      showToast(`🔒 Menu link locked: ${confirmed}.dzmenu.com`, "success", 4000);
     } catch (err) {
       showToast("Failed to lock subdomain.", "error");
     }
@@ -986,9 +988,7 @@ export default function RestaurantProfilePage() {
                           placeholder="your-restaurant"
                           className="flex-1 text-sm sm:text-base font-bold px-1.5 py-0.5 text-gray-900 focus:outline-none"
                         />
-                        <span className="text-xs sm:text-sm font-bold text-gray-500 select-none">
-                          .{getRootDomain()}
-                        </span>
+                        <span className="text-xs sm:text-sm font-bold text-gray-500 select-none">.dzmenu.com</span>
                       </div>
 
                       <motion.button
@@ -1553,7 +1553,7 @@ export default function RestaurantProfilePage() {
                   You are setting your permanent digital menu address to:
                 </p>
                 <p className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-xl font-mono text-xs font-bold text-amber-950">
-                  {getTenantMenuUrl(inputSubdomain)}
+                  https://{inputSubdomain}.dzmenu.com
                 </p>
               </div>
 
@@ -1634,7 +1634,7 @@ export default function RestaurantProfilePage() {
               <div className="p-3.5 bg-purple-50/70 border border-purple-200/80 rounded-2xl flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 font-mono text-sm font-bold text-purple-950">
                   <Globe size={16} className="text-purple-600 shrink-0" />
-                  <span>{getTenantMenuUrl(inputSubdomain)}</span>
+                  <span>https://{inputSubdomain}.dzmenu.com</span>
                 </div>
                 <span className="px-2.5 py-0.5 rounded-full bg-purple-200/60 text-purple-900 text-[11px] font-bold">
                   Trademark Shield
