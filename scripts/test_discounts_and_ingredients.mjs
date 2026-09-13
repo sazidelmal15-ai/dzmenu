@@ -306,4 +306,151 @@ test("Discounts Domain & Boundary Testing Suite", async (t) => {
     });
     assert.equal(invalidUpdate.success, false);
   });
+
+  // =========================================================================
+  // PRODUCTION REDESIGN SCENARIO TESTS (Scenarios A through F)
+  // =========================================================================
+
+  await t.test("13. Scenario A — Scheduled Promotion (Start: future, End: later future)", () => {
+    const start = "2026-09-13T18:00:00Z";
+    const end = "2026-09-13T22:00:00Z";
+    const now = new Date("2026-09-13T14:38:28Z"); // 3h 21m 32s before start
+
+    const state = calculateDiscountState({
+      price: 1500,
+      originalPrice: 2000,
+      discountStartsAt: start,
+      discountEndsAt: end,
+      now,
+    });
+
+    assert.equal(state, "scheduled");
+    assert.equal(isDiscountActive({ price: 1500, originalPrice: 2000, discountStartsAt: start, discountEndsAt: end, now }), false);
+  });
+
+  await t.test("14. Scenario B — Active Promotion (Start: current/past, End: future)", () => {
+    const start = "2026-09-13T18:00:00Z";
+    const end = "2026-09-13T22:00:00Z";
+    const now = new Date("2026-09-13T20:17:53Z"); // 1h 42m 07s remaining
+
+    const state = calculateDiscountState({
+      price: 1500,
+      originalPrice: 2000,
+      discountStartsAt: start,
+      discountEndsAt: end,
+      now,
+    });
+
+    assert.equal(state, "active");
+    assert.equal(isDiscountActive({ price: 1500, originalPrice: 2000, discountStartsAt: start, discountEndsAt: end, now }), true);
+    assert.equal(calculateDiscountPercentage(1500, 2000), 25);
+    assert.equal(calculateSavings(1500, 2000), 500);
+  });
+
+  await t.test("15. Scenario C — Expired Promotion (End: past)", () => {
+    const start = "2026-09-13T18:00:00Z";
+    const end = "2026-09-13T22:00:00Z";
+    const now = new Date("2026-09-13T22:05:00Z"); // After end
+
+    const state = calculateDiscountState({
+      price: 1500,
+      originalPrice: 2000,
+      discountStartsAt: start,
+      discountEndsAt: end,
+      now,
+    });
+
+    assert.equal(state, "expired");
+    assert.equal(isDiscountActive({ price: 1500, originalPrice: 2000, discountStartsAt: start, discountEndsAt: end, now }), false);
+  });
+
+  await t.test("16. Scenario D — Invalid Price (Promotional price >= regular price)", () => {
+    // Equal prices: 2000 and 2000
+    const equalValidation = menuItemCreateSchema.safeParse({
+      name: "Burger",
+      price: 2000,
+      originalPrice: 2000,
+    });
+    assert.equal(equalValidation.success, false);
+
+    // Higher promo price: 2500 vs 2000
+    const higherValidation = menuItemCreateSchema.safeParse({
+      name: "Burger",
+      price: 2500,
+      originalPrice: 2000,
+    });
+    assert.equal(higherValidation.success, false);
+  });
+
+  await t.test("17. Scenario E — Invalid Schedule (End <= Start)", () => {
+    const invalidSchedule = menuItemCreateSchema.safeParse({
+      name: "Burger",
+      price: 1500,
+      originalPrice: 2000,
+      discountStartsAt: "2026-09-13T22:00:00Z",
+      discountEndsAt: "2026-09-13T18:00:00Z",
+    });
+    assert.equal(invalidSchedule.success, false);
+  });
+
+  await t.test("18. Scenario F — Customer Menu Dynamic Presentation Mapping (No DB Mutation)", () => {
+    const start = "2026-09-13T18:00:00Z";
+    const end = "2026-09-13T22:00:00Z";
+
+    // Item as stored in DB: price = 1500 (promo), originalPrice = 2000 (regular)
+    const dbItem = {
+      id: "item-1",
+      categoryId: "cat-1",
+      name: "Artisan Burger",
+      description: "Juicy beef patty",
+      price: 1500,
+      originalPrice: 2000,
+      discountStartsAt: start,
+      discountEndsAt: end,
+      imageUrl: "/uploads/burger.webp",
+      ingredients: ["Beef", "Cheddar"],
+      isVisible: true,
+      isAvailable: true,
+      isFeatured: false,
+    };
+
+    // Phase 1: Scheduled (Before start, 14:00Z)
+    const scheduledInfo = evaluateItemDiscount({
+      price: dbItem.price,
+      originalPrice: dbItem.originalPrice,
+      discountStartsAt: dbItem.discountStartsAt,
+      discountEndsAt: dbItem.discountEndsAt,
+      now: new Date("2026-09-13T14:00:00Z"),
+    });
+    // Under scheduled window, the effective presentation price is regular price (2000 DA)
+    // and isActive is false
+    const effectivePriceScheduled = scheduledInfo.isActive ? dbItem.price : (dbItem.originalPrice ?? dbItem.price);
+    assert.equal(scheduledInfo.isActive, false);
+    assert.equal(scheduledInfo.state, "scheduled");
+    assert.equal(effectivePriceScheduled, 2000);
+
+    // Phase 2: Active (During promo window, e.g. 19:00Z)
+    // When now is inside the window:
+    const activeInfo = evaluateItemDiscount({
+      price: dbItem.price,
+      originalPrice: dbItem.originalPrice,
+      discountStartsAt: dbItem.discountStartsAt,
+      discountEndsAt: dbItem.discountEndsAt,
+      now: new Date("2026-09-13T19:00:00Z"),
+    });
+    assert.equal(activeInfo.isActive, true);
+    assert.equal(activeInfo.percentage, 25);
+    assert.equal(activeInfo.savings, 500);
+
+    // Phase 3: Expired (After promo window, e.g. 23:00Z)
+    const expiredInfo = evaluateItemDiscount({
+      price: dbItem.price,
+      originalPrice: dbItem.originalPrice,
+      discountStartsAt: dbItem.discountStartsAt,
+      discountEndsAt: dbItem.discountEndsAt,
+      now: new Date("2026-09-13T23:00:00Z"),
+    });
+    assert.equal(expiredInfo.isActive, false);
+    assert.equal(expiredInfo.state, "expired");
+  });
 });

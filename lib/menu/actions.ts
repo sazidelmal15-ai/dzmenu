@@ -30,6 +30,10 @@ const menuItemSchema = z.object({
   name: z.string().trim().min(1, "Item name is required").max(100),
   description: z.string().trim().max(1000).optional().nullable(),
   price: z.number().min(0, "Price cannot be negative"),
+  originalPrice: z.number().min(0).optional().nullable(),
+  discountStartsAt: z.string().optional().nullable(),
+  discountEndsAt: z.string().optional().nullable(),
+  ingredients: z.array(z.string().trim()).optional().default([]),
   imageUrl: z.string().trim().url().optional().nullable().or(z.literal("")),
   badge: z.enum(MENU_ITEM_BADGES).optional().nullable(),
   tags: z
@@ -172,6 +176,10 @@ export async function saveMenuItemAction(data: {
   name: string;
   description?: string | null;
   price: number;
+  originalPrice?: number | null;
+  discountStartsAt?: string | null;
+  discountEndsAt?: string | null;
+  ingredients?: string[];
   imageUrl?: string | null;
   badge?: MenuItemBadge | null;
   tags?: MenuItemTag[];

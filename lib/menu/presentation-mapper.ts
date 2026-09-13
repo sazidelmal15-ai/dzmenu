@@ -269,7 +269,7 @@ export function calculateScheduleStatus(
   };
 }
 
-import { evaluateItemDiscount, sanitizeIngredients } from "@/lib/menu/discounts";
+import { evaluateItemDiscount, sanitizeIngredients } from "./discounts";
 
 /**
  * Transforms a raw MenuItem into a decoupled MenuItemView.
@@ -287,6 +287,14 @@ export function mapItemToView(item: MenuItem, currency: string, locale: string):
     discountEndsAt: item.discountEndsAt,
   });
 
+  // When discount is active, customer pays promotional price.
+  // When discount is scheduled or expired, customer pays regular (original) price.
+  const effectivePrice = discountInfo.isActive
+    ? price
+    : (discountInfo.originalPrice != null && discountInfo.originalPrice > price
+        ? discountInfo.originalPrice
+        : price);
+
   const formattedOriginalPrice =
     discountInfo.isActive && discountInfo.originalPrice != null
       ? formatPrice(discountInfo.originalPrice, currency, locale)
@@ -300,8 +308,8 @@ export function mapItemToView(item: MenuItem, currency: string, locale: string):
     categoryName: item.categoryName ?? null,
     name: item.name,
     description: item.description ?? null,
-    price,
-    formattedPrice: formatPrice(price, currency, locale),
+    price: effectivePrice,
+    formattedPrice: formatPrice(effectivePrice, currency, locale),
     originalPrice: discountInfo.originalPrice,
     formattedOriginalPrice,
     hasActiveDiscount: discountInfo.isActive,
