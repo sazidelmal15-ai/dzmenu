@@ -1,22 +1,21 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useTransition } from 'react';
+import dynamic from 'next/dynamic';
 import {
   Plus,
-  Search,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
   LayoutGrid,
   List,
   Trash2,
-  Download,
-  Upload,
   Edit3,
   Image as ImageIcon,
   AlertTriangle,
+  Eye,
+  EyeOff,
+  Check,
+  FolderPlus,
+  Layers,
 } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
 import { apiFetch } from '@/lib/api';
 import { formatPrice } from '@/lib/utils/currency';
 import { evaluateItemDiscount } from '@/lib/menu/discounts';
@@ -26,100 +25,86 @@ import {
   BADGE_DEFINITIONS,
   TAG_DEFINITIONS,
 } from '@/types/menu';
-import ItemDrawer from './components/ItemDrawer';
-import CategoryDrawer from './components/CategoryDrawer';
+
+// Code-split heavy drawers to keep initial bundle ultra-light and fast
+const ItemDrawer = dynamic(() => import('./components/ItemDrawer'), { ssr: false });
+const CategoryDrawer = dynamic(() => import('./components/CategoryDrawer'), { ssr: false });
 
 // Global in-memory cache for instant 0ms page transitions
 let inMemoryCategoriesCache: any[] | null = null;
+
+// Smart category icon mapper
+function getCategoryIcon(name: string): string {
+  const n = (name || '').toLowerCase();
+  if (n.includes('burger') || n.includes('برغر') || n.includes('برجر')) return '🍔';
+  if (n.includes('pizza') || n.includes('بيتزا')) return '🍕';
+  if (n.includes('side') || n.includes('salad') || n.includes('مقبلات') || n.includes('سلط')) return '🥗';
+  if (n.includes('breakfast') || n.includes('فطور') || n.includes('egg') || n.includes('بيض')) return '🍳';
+  if (n.includes('seafood') || n.includes('fish') || n.includes('سمك') || n.includes('بحر')) return '🐟';
+  if (n.includes('main') || n.includes('رئيسي') || n.includes('طبق')) return '🍲';
+  if (n.includes('sandwich') || n.includes('taco') || n.includes('تاكوس') || n.includes('ساندويتش') || n.includes('شاورما')) return '🌮';
+  if (n.includes('grill') || n.includes('steak') || n.includes('bbq') || n.includes('مشاوي') || n.includes('لحم')) return '🥩';
+  if (n.includes('pasta') || n.includes('باستا') || n.includes('مكرونة')) return '🍝';
+  if (n.includes('chicken') || n.includes('دجاج') || n.includes('poulet')) return '🍗';
+  if (n.includes('coffee') || n.includes('tea') || n.includes('قهوة') || n.includes('شاي') || n.includes('cafe')) return '☕';
+  if (n.includes('drink') || n.includes('beverage') || n.includes('juice') || n.includes('عصير') || n.includes('مشروب')) return '🥤';
+  if (n.includes('ice cream') || n.includes('dessert') || n.includes('cake') || n.includes('حلو') || n.includes('كيك') || n.includes('حلويات')) return '🍰';
+  return '🍽️';
+}
+
+function getImageUrl(url: string): string {
+  if (!url) return '';
+  if (url.startsWith('blob:') || url.startsWith('/uploads/') || url.startsWith('http')) return url;
+  return url;
+}
 
 export default function MenuPage({ initialCategories = [] }: { initialCategories?: any[] }) {
   const [categories, setCategories] = useState<any[]>(initialCategories);
   const [currency, setCurrency] = useState<string>('DZD');
   const [activeCategoryId, setActiveCategoryId] = useState<string>('all');
   const [loading, setLoading] = useState<boolean>(initialCategories.length === 0);
+  const [, startTransition] = useTransition();
 
+  // Drawer states (loaded lazily)
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCategoryDrawerOpen, setIsCategoryDrawerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [sortOrder, setSortOrder] = useState('name');
 
-  // Delete confirmation modal state
+  // Filters & View Mode
+  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'hidden'>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+
+  // Delete item modal
   const [deleteConfirmItem, setDeleteConfirmItem] = useState<any>(null);
   const [deleteInput, setDeleteInput] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
-
-  // View Mode: Grid Cards or Clean Table List
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
-
-  // Horizontal category carousel scrolling
-  const categoriesScrollRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-
-  const checkScroll = () => {
-    if (categoriesScrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = categoriesScrollRef.current;
-      setCanScrollLeft(scrollLeft > 10);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
-    }
-  };
-
-  useEffect(() => {
-    const timer = setTimeout(checkScroll, 100);
-    window.addEventListener('resize', checkScroll);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', checkScroll);
-    };
-  }, [categories]);
-
-  const handleScroll = (direction: 'left' | 'right') => {
-    if (categoriesScrollRef.current) {
-      const scrollAmount = 320;
-      categoriesScrollRef.current.scrollBy({
-        left: direction === 'left' ? -scrollAmount : scrollAmount,
-        behavior: 'smooth',
-      });
-      setTimeout(checkScroll, 350);
-    }
-  };
-
-  const fetchMenu = async (showSpinner = false) => {
+  // Fetch Menu Data
+  const fetchMenu = async (silent = false) => {
     try {
-      if (showSpinner && categories.length === 0) {
-        setLoading(true);
-      }
+      if (!silent && categories.length === 0) setLoading(true);
       const res = await fetch('/api/menu/categories');
       const json = await res.json();
       const categoriesData = Array.isArray(json.data) ? json.data : [];
       setCategories(categoriesData);
-      if (json.currency) {
-        setCurrency(json.currency);
-      }
+      if (json.currency) setCurrency(json.currency);
       inMemoryCategoriesCache = categoriesData;
       if (typeof window !== 'undefined') {
         try {
           sessionStorage.setItem('dzmenu_categories_cache', JSON.stringify(categoriesData));
-          if (json.currency) {
-            sessionStorage.setItem('dzmenu_currency_cache', json.currency);
-          }
-        } catch (e) {}
+          if (json.currency) sessionStorage.setItem('dzmenu_currency_cache', json.currency);
+        } catch {}
       }
     } catch (err) {
-      console.error(err);
+      console.error('fetchMenu error:', err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Safely hydrate from client cache after SSR mount (100% Hydration Safe)
+    // 0ms instant hydration from cache
     if (inMemoryCategoriesCache && inMemoryCategoriesCache.length > 0) {
       setCategories(inMemoryCategoriesCache);
       setLoading(false);
@@ -135,22 +120,87 @@ export default function MenuPage({ initialCategories = [] }: { initialCategories
           }
         }
         const savedCurr = sessionStorage.getItem('dzmenu_currency_cache');
-        if (savedCurr) {
-          setCurrency(savedCurr);
-        }
-      } catch (e) {}
+        if (savedCurr) setCurrency(savedCurr);
+      } catch {}
     }
-
-    // Fresh sync in the background
-    fetchMenu();
+    fetchMenu(true);
   }, []);
+
+  // Compute Active Category and Items
+  const activeCategory = useMemo(() => {
+    if (activeCategoryId === 'all') return null;
+    return categories.find((c) => c.id === activeCategoryId) || null;
+  }, [categories, activeCategoryId]);
+
+  const allItemsCount = useMemo(() => {
+    return categories.reduce((sum, c) => sum + (c.items?.length || 0), 0);
+  }, [categories]);
+
+  const rawDisplayItems = useMemo(() => {
+    if (activeCategoryId === 'all') {
+      return categories.flatMap((c) =>
+        (c.items || []).map((i: any) => ({ ...i, categoryName: c.name }))
+      );
+    }
+    const cat = categories.find((c) => c.id === activeCategoryId);
+    if (!cat) return [];
+    return (cat.items || []).map((i: any) => ({ ...i, categoryName: cat.name }));
+  }, [categories, activeCategoryId]);
+
+  const displayItems = useMemo(() => {
+    if (statusFilter === 'available') {
+      return rawDisplayItems.filter((i: any) => i.isVisible !== false && !i.isDeleted);
+    }
+    if (statusFilter === 'hidden') {
+      return rawDisplayItems.filter((i: any) => i.isVisible === false && !i.isDeleted);
+    }
+    return rawDisplayItems.filter((i: any) => !i.isDeleted);
+  }, [rawDisplayItems, statusFilter]);
+
+  // Instant 0ms Optimistic Visibility Toggle
+  const handleToggleVisibility = async (item: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newIsVisible = item.isVisible === false ? true : false;
+
+    // 1. Instant local optimistic update
+    startTransition(() => {
+      setCategories((prev) =>
+        prev.map((cat) => ({
+          ...cat,
+          items: (cat.items || []).map((i: any) =>
+            i.id === item.id ? { ...i, isVisible: newIsVisible } : i
+          ),
+        }))
+      );
+    });
+
+    // 2. Fire background request to persist
+    try {
+      await apiFetch(`/menu/items/${item.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isVisible: newIsVisible }),
+      });
+    } catch (err) {
+      console.error('Failed to update visibility:', err);
+      // Revert on error
+      fetchMenu(true);
+    }
+  };
 
   const handleEdit = (item: any) => {
     setEditingItem(item);
     setIsDrawerOpen(true);
   };
 
-  const handleDeleteClick = (item: any) => {
+  const handleAddNewItem = () => {
+    setEditingItem(
+      activeCategoryId !== 'all' ? { categoryId: activeCategoryId } : null
+    );
+    setIsDrawerOpen(true);
+  };
+
+  const handleDeleteClick = (item: any, e: React.MouseEvent) => {
+    e.stopPropagation();
     setDeleteConfirmItem(item);
     setDeleteInput('');
     setDeleteError('');
@@ -168,7 +218,7 @@ export default function MenuPage({ initialCategories = [] }: { initialCategories
       await apiFetch(`/menu/items/${deleteConfirmItem.id}`, { method: 'DELETE' });
       setDeleteConfirmItem(null);
       setDeleteInput('');
-      await fetchMenu();
+      await fetchMenu(true);
     } catch (err: any) {
       setDeleteError(err.message || 'Failed to delete item.');
     } finally {
@@ -176,746 +226,505 @@ export default function MenuPage({ initialCategories = [] }: { initialCategories
     }
   };
 
-
-  const handleAddNew = () => {
-    setEditingItem(null);
-    setIsDrawerOpen(true);
-  };
-
-  // Flatten items based on selected category
-  const baseItems =
-    activeCategoryId === 'all'
-      ? categories.flatMap((c) => (c.items || []).map((i: any) => ({ ...i, categoryName: c.name })))
-      : categories
-          .find((c) => c.id === activeCategoryId)
-          ?.items?.map((i: any) => ({
-            ...i,
-            categoryName: categories.find((c) => c.id === activeCategoryId)?.name,
-          })) || [];
-
-  // Apply search filter
-  const searchedItems = searchQuery.trim()
-    ? baseItems.filter(
-        (item: any) =>
-          item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.categoryName?.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : baseItems;
-
-  // Apply status filter
-  const filteredItems =
-    statusFilter === 'all'
-      ? searchedItems
-      : statusFilter === 'available'
-      ? searchedItems.filter((item: any) => item.isAvailable && item.isVisible !== false && !item.isDeleted)
-      : statusFilter === 'hidden'
-      ? searchedItems.filter((item: any) => item.isVisible === false && !item.isDeleted)
-      : statusFilter === 'unavailable'
-      ? searchedItems.filter((item: any) => !item.isAvailable && !item.isDeleted)
-      : statusFilter === 'featured'
-      ? searchedItems.filter((item: any) => item.isFeatured && !item.isDeleted)
-      : searchedItems;
-
-  // Apply sort
-  const displayItems = [...filteredItems].sort((a: any, b: any) => {
-    if (sortOrder === 'price_asc') return a.price - b.price;
-    if (sortOrder === 'price_desc') return b.price - a.price;
-    return a.name.localeCompare(b.name);
-  });
-
-  // Pagination calculation
-  const totalPages = Math.ceil(displayItems.length / itemsPerPage) || 1;
-  const paginatedItems = displayItems.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
-  const allItemsCount = categories.reduce((sum, c) => sum + (c.items?.length || 0), 0);
-
-  // Category dot colors for table view
-  const getCategoryDotColor = (categoryName: string) => {
-    const n = (categoryName || '').toLowerCase();
-    if (n.includes('burger') || n.includes('برغر')) return 'bg-amber-500';
-    if (n.includes('pizza') || n.includes('بيتزا')) return 'bg-rose-500';
-    if (n.includes('drink') || n.includes('juice') || n.includes('عصير') || n.includes('مشروب')) return 'bg-blue-500';
-    if (n.includes('dessert') || n.includes('cake') || n.includes('حلو')) return 'bg-purple-500';
-    if (n.includes('side') || n.includes('salad') || n.includes('سلط') || n.includes('مقبلات')) return 'bg-emerald-500';
-    if (n.includes('breakfast') || n.includes('فطور') || n.includes('egg')) return 'bg-yellow-500';
-    if (n.includes('seafood') || n.includes('fish') || n.includes('سمك')) return 'bg-cyan-500';
-    if (n.includes('grill') || n.includes('steak') || n.includes('لحم')) return 'bg-orange-600';
-    return 'bg-amber-500';
-  };
-
-  // Smart category icons mapping for presentation
-  const getCategoryIcon = (name: string) => {
-    const n = (name || '').toLowerCase();
-    if (n.includes('burger') || n.includes('برغر')) return '🍔';
-    if (n.includes('pizza') || n.includes('بيتزا')) return '🍕';
-    if (n.includes('side') || n.includes('salad') || n.includes('مقبلات') || n.includes('سلط')) return '🥗';
-    if (n.includes('breakfast') || n.includes('فطور') || n.includes('egg')) return '🍳';
-    if (n.includes('seafood') || n.includes('fish') || n.includes('سمك') || n.includes('بحر')) return '🐟';
-    if (n.includes('main') || n.includes('رئيسي') || n.includes('طبق')) return '🍲';
-    if (n.includes('sandwich') || n.includes('taco') || n.includes('تاكوس') || n.includes('ساندويتش')) return '🌮';
-    if (n.includes('grill') || n.includes('steak') || n.includes('bbq') || n.includes('مشاوي') || n.includes('لحم')) return '🥩';
-    if (n.includes('pasta') || n.includes('باستا') || n.includes('مكرونة')) return '🍝';
-    if (n.includes('chicken') || n.includes('دجاج') || n.includes('poulet')) return '🍗';
-    if (n.includes('coffee') || n.includes('tea') || n.includes('قهوة') || n.includes('شاي')) return '☕';
-    if (n.includes('drink') || n.includes('beverage') || n.includes('juice') || n.includes('عصير') || n.includes('مشروب')) return '🥤';
-    if (n.includes('ice cream') || n.includes('dessert') || n.includes('cake') || n.includes('حلو') || n.includes('كيك')) return '🍰';
-    return '🍽️';
-  };
-
-  const getImageUrl = (url: string) => {
-    if (!url) return '';
-    if (url.startsWith('blob:')) return url;
-    if (url.startsWith('/uploads/')) return url;
-    if (url.startsWith('http')) return url;
-    return url;
-  };
-
   return (
-    <div className="flex flex-col min-h-full p-4 sm:p-6 lg:p-8">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-[28px] font-bold text-gray-900 tracking-tight">Menu Management</h1>
-          <p className="text-[15px] text-gray-500 mt-1">Manage your menu items, categories and options</p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#F3F0E6] bg-white text-sm font-semibold text-gray-700 hover:bg-[#FAF9F5] hover:text-gray-900 transition-colors shadow-sm">
-            <Upload size={16} className="text-gray-400" /> Import
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#F3F0E6] bg-white text-sm font-semibold text-gray-700 hover:bg-[#FAF9F5] hover:text-gray-900 transition-colors shadow-sm">
-            <Download size={16} className="text-gray-400" /> Export
-          </button>
-          <button
-            onClick={() => setIsCategoryDrawerOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-amber-500 bg-white text-sm font-bold text-amber-600 hover:bg-[#FEF9EE] transition-colors shadow-sm"
-          >
-            <Plus size={16} strokeWidth={2.5} /> Add Category
-          </button>
-          <button
-            onClick={handleAddNew}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white text-sm font-bold transition-all shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 hover:-translate-y-0.5"
-          >
-            <Plus size={18} strokeWidth={2.5} /> Add Item
-          </button>
-        </div>
-      </div>
-
-      {/* Categories Bar Carousel with Arrow Controls */}
-      <div className="relative group mb-4">
-        {/* Left Scroll Arrow */}
-        {canScrollLeft && (
-          <button
-            type="button"
-            onClick={() => handleScroll('left')}
-            className="absolute -left-3.5 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white border border-[#F3F0E6] text-gray-700 shadow-md hover:bg-[#FEF9EE] hover:text-[#D97706] hover:scale-110 active:scale-95 transition-all"
-            aria-label="Scroll left"
-          >
-            <ChevronLeft size={18} strokeWidth={2.5} />
-          </button>
-        )}
-
-        {/* Categories Bar */}
-        <div
-          ref={categoriesScrollRef}
-          onScroll={checkScroll}
-          className="flex gap-4 overflow-x-auto pb-3 scrollbar-none no-scrollbar scroll-smooth"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          <button
-            onClick={() => setActiveCategoryId('all')}
-            className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl min-w-max border-2 transition-all duration-150 ${
-              activeCategoryId === 'all'
-                ? 'bg-white border-amber-500 shadow-md shadow-amber-500/15'
-                : 'bg-white border-[#F3F0E6] hover:border-amber-300 shadow-sm opacity-80 hover:opacity-100'
-            }`}
-          >
-            <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl ${
-                activeCategoryId === 'all' ? 'bg-[#FEF9EE] text-[#D97706]' : 'bg-gray-50'
-              }`}
-            >
-              <LayoutGrid size={20} className={activeCategoryId === 'all' ? 'text-[#D97706]' : 'text-gray-500'} />
+    <div className="flex flex-col h-[calc(100vh-4rem)] overflow-hidden bg-[#FAF9F5]">
+      {/* Main Split-Pane Workspace */}
+      <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden">
+        
+        {/* ========================================================================= */}
+        {/* 1. RIGHT COLUMN: Ultra-fast Categories Navigation Sidebar (Master)        */}
+        {/* ========================================================================= */}
+        <aside className="w-full md:w-72 lg:w-80 shrink-0 bg-white border-b md:border-b-0 md:border-l border-[#EFECE6] flex flex-col min-h-0">
+          {/* Sidebar Header */}
+          <div className="p-4 border-b border-[#F3F0E6] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Layers size={18} className="text-[#D97706]" />
+              <h2 className="font-bold text-gray-900 text-base">الأقسام</h2>
+              <span className="text-xs font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                {categories.length}
+              </span>
             </div>
-            <div className="text-left">
-              <div className={`text-[15px] font-bold ${activeCategoryId === 'all' ? 'text-gray-900' : 'text-gray-700'}`}>
-                All Categories
-              </div>
-              <div className="text-[13px] font-medium text-gray-400">{allItemsCount} items</div>
-            </div>
-          </button>
-
-          {categories.map((cat) => (
             <button
-              key={cat.id}
-              onClick={() => setActiveCategoryId(cat.id)}
-              className={`flex items-center gap-3 px-5 py-3.5 rounded-2xl min-w-max border-2 transition-all duration-150 ${
-                activeCategoryId === cat.id
-                  ? 'bg-white border-amber-500 shadow-md shadow-amber-500/15'
-                  : 'bg-white border-[#F3F0E6] hover:border-amber-300 shadow-sm opacity-80 hover:opacity-100'
+              onClick={() => setIsCategoryDrawerOpen(true)}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#FEF9EE] hover:bg-[#FDE68A]/40 text-[#D97706] text-xs font-bold transition cursor-pointer"
+            >
+              <Plus size={14} /> قسم جديد
+            </button>
+          </div>
+
+          {/* Categories Scrollable List */}
+          <nav className="flex-1 overflow-y-auto p-2 space-y-1">
+            {/* 'All Items' Tab */}
+            <button
+              type="button"
+              onClick={() => setActiveCategoryId('all')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition text-right cursor-pointer ${
+                activeCategoryId === 'all'
+                  ? 'bg-[#FEF9EE] text-[#D97706] border border-amber-200/80 shadow-xs'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }`}
             >
-              <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-xl shrink-0 overflow-hidden">
-                {cat.icon && cat.icon !== '🍽️' ? (
-                  cat.icon.startsWith('http') || cat.icon.startsWith('blob:') || cat.icon.startsWith('data:') || cat.icon.startsWith('/') ? (
-                    cat.icon.includes('high_contrast.svg') ? (
-                      <div
-                        className="w-6 h-6"
-                        style={{
-                          backgroundColor: '#D97706',
-                          WebkitMaskImage: `url("${cat.icon}")`,
-                          WebkitMaskSize: 'contain',
-                          WebkitMaskRepeat: 'no-repeat',
-                          WebkitMaskPosition: 'center',
-                          maskImage: `url("${cat.icon}")`,
-                          maskSize: 'contain',
-                          maskRepeat: 'no-repeat',
-                          maskPosition: 'center',
-                        }}
-                      />
-                    ) : (
-                      <img src={cat.icon} alt={cat.name} className="w-6 h-6 object-contain" />
-                    )
-                  ) : (
-                    cat.icon
-                  )
-                ) : (
-                  getCategoryIcon(cat.name)
-                )}
+              <div className="flex items-center gap-2.5 truncate">
+                <span className="text-base">✨</span>
+                <span className="truncate">كل الأطباق</span>
               </div>
-              <div className="text-left flex-1 pr-2">
-                <div className={`text-[15px] font-bold ${activeCategoryId === cat.id ? 'text-gray-900' : 'text-gray-700'}`}>
-                  {cat.name}
+              <span
+                className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                  activeCategoryId === 'all'
+                    ? 'bg-[#D97706] text-white'
+                    : 'bg-gray-100 text-gray-500'
+                }`}
+              >
+                {allItemsCount}
+              </span>
+            </button>
+
+            {/* Individual Categories */}
+            {categories.map((cat) => {
+              const isActive = activeCategoryId === cat.id;
+              const count = cat.items?.length || 0;
+              const icon = cat.icon || getCategoryIcon(cat.name);
+
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setActiveCategoryId(cat.id)}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-semibold transition text-right cursor-pointer ${
+                    isActive
+                      ? 'bg-[#FEF9EE] text-[#D97706] border border-amber-200/80 shadow-xs'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 truncate">
+                    <span className="text-base shrink-0">{icon}</span>
+                    <span className="truncate">{cat.name}</span>
+                  </div>
+                  <span
+                    className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                      isActive
+                        ? 'bg-[#D97706] text-white'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+
+            {categories.length === 0 && !loading && (
+              <div className="p-6 text-center text-gray-400 text-xs">
+                لا توجد أقسام بعد. اضغط على "+ قسم جديد" للبدء.
+              </div>
+            )}
+          </nav>
+        </aside>
+
+        {/* ========================================================================= */}
+        {/* 2. LEFT COLUMN: Selected Category Items Workspace (Detail)                */}
+        {/* ========================================================================= */}
+        <main className="flex-1 flex flex-col min-w-0 bg-[#FAF9F5] min-h-0 overflow-hidden">
+          {/* Workspace Action Header */}
+          <header className="px-6 py-4 bg-white border-b border-[#EFECE6] flex flex-wrap items-center justify-between gap-4 shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-2xl shrink-0">
+                {activeCategory ? activeCategory.icon || getCategoryIcon(activeCategory.name) : '✨'}
+              </span>
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold text-gray-900 tracking-tight truncate">
+                  {activeCategory ? activeCategory.name : 'كل الأطباق'}
+                </h1>
+                <p className="text-xs text-gray-500">
+                  {displayItems.length} طبق معروض
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Filter & Actions Controls */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Status Filter Toggle */}
+              <div className="flex items-center bg-gray-100 p-1 rounded-xl text-xs font-semibold text-gray-600">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('all')}
+                  className={`px-3 py-1 rounded-lg transition cursor-pointer ${
+                    statusFilter === 'all' ? 'bg-white text-gray-900 shadow-xs font-bold' : 'hover:text-gray-900'
+                  }`}
+                >
+                  الكل
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('available')}
+                  className={`px-3 py-1 rounded-lg transition cursor-pointer ${
+                    statusFilter === 'available' ? 'bg-white text-amber-700 shadow-xs font-bold' : 'hover:text-gray-900'
+                  }`}
+                >
+                  🟢 متوفر
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('hidden')}
+                  className={`px-3 py-1 rounded-lg transition cursor-pointer ${
+                    statusFilter === 'hidden' ? 'bg-white text-gray-900 shadow-xs font-bold' : 'hover:text-gray-900'
+                  }`}
+                >
+                  ⚫ مخفي
+                </button>
+              </div>
+
+              {/* View Switcher: Grid / List */}
+              <div className="flex items-center bg-gray-100 p-1 rounded-xl text-gray-600">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  className={`p-1.5 rounded-lg transition cursor-pointer ${
+                    viewMode === 'grid' ? 'bg-white text-[#D97706] shadow-xs' : 'hover:text-gray-900'
+                  }`}
+                  title="عرض شبكي"
+                >
+                  <LayoutGrid size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`p-1.5 rounded-lg transition cursor-pointer ${
+                    viewMode === 'list' ? 'bg-white text-[#D97706] shadow-xs' : 'hover:text-gray-900'
+                  }`}
+                  title="عرض قائمة"
+                >
+                  <List size={16} />
+                </button>
+              </div>
+
+              {/* Add Item Button */}
+              <button
+                type="button"
+                onClick={handleAddNewItem}
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#D97706] hover:bg-[#B45309] text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer"
+              >
+                <Plus size={16} /> إضافة طبق
+              </button>
+            </div>
+          </header>
+
+          {/* Items Content Container (Scrollable) */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {displayItems.length === 0 ? (
+              <div className="h-full min-h-[300px] flex flex-col items-center justify-center text-center p-8 bg-white rounded-2xl border border-dashed border-[#E5E0D8]">
+                <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3">
+                  <FolderPlus size={28} />
                 </div>
-                <div className="text-[13px] font-medium text-gray-400">{cat.items?.length || 0} items</div>
+                <h3 className="font-bold text-gray-900 text-base mb-1">لا توجد أطباق في هذا العرض</h3>
+                <p className="text-xs text-gray-500 max-w-xs mb-4">
+                  {statusFilter !== 'all'
+                    ? 'لا توجد أطباق تطابق الفلتر المختار حالياً.'
+                    : 'ابدأ بإضافة أول طبق في هذا القسم لتظهر للزبائن في المنيو.'}
+                </p>
+                <button
+                  type="button"
+                  onClick={handleAddNewItem}
+                  className="px-4 py-2 bg-[#D97706] hover:bg-[#B45309] text-white rounded-xl text-xs font-bold transition cursor-pointer"
+                >
+                  + إضافة طبق جديد
+                </button>
               </div>
-            </button>
-          ))}
-        </div>
-
-        {/* Right Scroll Arrow */}
-        {canScrollRight && (
-          <button
-            type="button"
-            onClick={() => handleScroll('right')}
-            className="absolute -right-3.5 top-1/2 -translate-y-1/2 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-white border border-[#F3F0E6] text-gray-700 shadow-md hover:bg-[#FEF9EE] hover:text-[#D97706] hover:scale-110 active:scale-95 transition-all"
-            aria-label="Scroll right"
-          >
-            <ChevronRight size={18} strokeWidth={2.5} />
-          </button>
-        )}
-      </div>
-
-      {/* Filter Row */}
-      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
-        <div className="relative w-full lg:w-[320px]">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input
-            type="text"
-            placeholder="Search menu items..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#F3F0E6] rounded-xl text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all shadow-sm placeholder:text-gray-400"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => {
-                setSearchQuery('');
-                setCurrentPage(1);
-              }}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 text-lg leading-none"
-            >
-              ×
-            </button>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative">
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="appearance-none bg-white border border-[#F3F0E6] rounded-xl px-4 py-2.5 pr-10 text-sm font-semibold text-gray-700 focus:outline-none focus:border-amber-500 shadow-sm cursor-pointer"
-            >
-              <option value="all">All Status</option>
-              <option value="available">Available</option>
-              <option value="hidden">Hidden from Menu</option>
-              <option value="unavailable">Unavailable (Out of Stock)</option>
-              <option value="featured">⭐ Featured Only</option>
-            </select>
-            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-          </div>
-          <div className="relative">
-            <select
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-              className="appearance-none bg-white border border-[#F3F0E6] rounded-xl px-4 py-2.5 pr-10 text-sm font-semibold text-gray-700 focus:outline-none focus:border-amber-500 shadow-sm cursor-pointer"
-            >
-              <option value="name">Sort by: Name</option>
-              <option value="price_asc">Sort by: Price ↑</option>
-              <option value="price_desc">Sort by: Price ↓</option>
-            </select>
-            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-          </div>
-
-          {/* Grid / List View Mode Toggle */}
-          <div className="flex bg-white border border-[#F3F0E6] rounded-xl p-1 shadow-sm ml-2">
-            <button
-              type="button"
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-lg transition-all ${
-                viewMode === 'grid'
-                  ? 'bg-[#FEF9EE] text-[#D97706] shadow-sm'
-                  : 'text-gray-400 hover:text-gray-700'
-              }`}
-              title="Grid View"
-            >
-              <LayoutGrid size={18} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-lg transition-all ${
-                viewMode === 'list'
-                  ? 'bg-[#FEF9EE] text-[#D97706] shadow-sm'
-                  : 'text-gray-400 hover:text-gray-700'
-              }`}
-              title="Table / List View"
-            >
-              <List size={18} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Items Display */}
-      {loading ? (
-        <div className="flex-1 flex items-center justify-center py-20">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500"></div>
-        </div>
-      ) : displayItems.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center py-20 text-center bg-white rounded-3xl border border-[#F3F0E6] border-dashed">
-          <LayoutGrid className="w-12 h-12 text-gray-300 mb-4" />
-          <h3 className="text-xl font-bold text-gray-900 mb-2">No items found</h3>
-          <p className="text-gray-500 max-w-sm mb-6">
-            There are no menu items in this category. Click the button below to add your first item.
-          </p>
-          <button
-            onClick={handleAddNew}
-            className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-amber-500/25"
-          >
-            Add Item
-          </button>
-        </div>
-      ) : viewMode === 'list' ? (
-        /* Table / List View */
-        <div className="bg-white rounded-3xl border border-[#F3F0E6] shadow-sm overflow-hidden mb-8">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-[#F3F0E6] text-[11px] font-bold tracking-wider text-gray-400 uppercase bg-[#FAF9F5]/60">
-                  <th className="py-4 pl-6 pr-4">ITEM</th>
-                  <th className="py-4 px-4">CATEGORY</th>
-                  <th className="py-4 px-4">PRICE</th>
-                  <th className="py-4 px-4">STATUS</th>
-                  <th className="py-4 pr-6 pl-4 text-right">ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F3F0E6]/60">
-                {paginatedItems.map((item: any) => {
+            ) : viewMode === 'grid' ? (
+              /* Grid Cards Layout */
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {displayItems.map((item: any) => {
                   const discountInfo = evaluateItemDiscount({
                     price: Number(item.price) || 0,
                     originalPrice: item.originalPrice,
                     discountStartsAt: item.discountStartsAt,
                     discountEndsAt: item.discountEndsAt,
                   });
-                  const effectivePrice = discountInfo.isActive
-                    ? Number(item.price)
-                    : (discountInfo.originalPrice != null && discountInfo.originalPrice > Number(item.price)
-                        ? discountInfo.originalPrice
-                        : Number(item.price));
+                  const isVisible = item.isVisible !== false;
 
                   return (
-                    <tr key={item.id} className="hover:bg-[#FEF9EE]/30 transition-colors group">
-                      {/* Item Image + Title + Description */}
-                      <td className="py-3.5 pl-6 pr-4">
-                        <div className="flex items-center gap-3.5">
-                          <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 border border-[#F3F0E6]">
-                            {item.images?.[0] ? (
-                              <img src={getImageUrl(item.images[0].url)} alt={item.name} className="w-full h-full object-cover" />
-                            ) : item.imageUrl ? (
-                              <img src={getImageUrl(item.imageUrl)} alt={item.name} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-gray-400">
-                                <ImageIcon size={20} className="opacity-40" />
-                              </div>
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-bold text-gray-900 text-[14.5px] leading-snug truncate group-hover:text-[#D97706] transition-colors">
-                              {item.name}
-                            </p>
-                            <p className="text-[12px] text-gray-400 truncate max-w-xs">
-                              {item.description || "No description provided"}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-
-                      {/* Category with dot */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2 h-2 rounded-full ${getCategoryDotColor(item.categoryName)}`} />
-                          <span className="text-[13.5px] font-medium text-gray-700">{item.categoryName || "General"}</span>
-                        </div>
-                      </td>
-
-                      {/* Price */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        {discountInfo.isActive ? (
-                          <div className="flex items-baseline gap-1.5">
-                            <span className="font-bold text-amber-600 text-[14.5px]">{formatPrice(item.price, currency)}</span>
-                            {discountInfo.originalPrice && (
-                              <span className="text-[11px] text-gray-400 line-through font-medium">
-                                {formatPrice(discountInfo.originalPrice, currency)}
-                              </span>
-                            )}
-                          </div>
+                    <div
+                      key={item.id}
+                      className="bg-white rounded-2xl border border-[#EFECE6] p-4 flex flex-col justify-between hover:shadow-md transition-shadow group relative"
+                    >
+                      {/* Card Visual & Badge */}
+                      <div className="relative aspect-[4/3] rounded-xl bg-gray-50 overflow-hidden mb-3">
+                        {item.images?.[0] || item.imageUrl ? (
+                          <img
+                            src={getImageUrl(item.images?.[0]?.url || item.imageUrl)}
+                            alt={item.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                          />
                         ) : (
-                          <span className="font-bold text-gray-900 text-[14.5px]">{formatPrice(effectivePrice, currency)}</span>
+                          <div className="w-full h-full flex items-center justify-center text-gray-300">
+                            <ImageIcon size={32} />
+                          </div>
                         )}
-                      </td>
 
-                      {/* Status Badge */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        {item.isVisible === false ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> Hidden
+                        {/* Promo / Badge */}
+                        {discountInfo.isActive && discountInfo.percentage ? (
+                          <span className="absolute top-2.5 right-2.5 bg-orange-600 text-white text-[10px] font-black px-2 py-0.5 rounded-md shadow-sm">
+                            -{discountInfo.percentage}%
                           </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Available
+                        ) : item.badge && BADGE_DEFINITIONS[item.badge as MenuItemBadge] ? (
+                          <span className="absolute top-2.5 right-2.5 bg-amber-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-md shadow-sm flex items-center gap-1">
+                            <span>{BADGE_DEFINITIONS[item.badge as MenuItemBadge].icon}</span>
+                            <span>{BADGE_DEFINITIONS[item.badge as MenuItemBadge].label}</span>
                           </span>
-                        )}
-                      </td>
+                        ) : null}
+                      </div>
 
-                      {/* Actions */}
-                      <td className="py-3.5 pr-6 pl-4 whitespace-nowrap text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <button
-                            onClick={() => handleEdit(item)}
-                            className="p-2 rounded-xl border border-[#F3F0E6] text-gray-600 hover:text-[#D97706] hover:border-amber-300 hover:bg-[#FEF9EE] transition shadow-sm cursor-pointer"
-                            title="Edit item"
-                          >
-                            <Edit3 size={15} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteClick(item)}
-                            className="p-2 rounded-xl border border-[#F3F0E6] text-gray-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition shadow-sm cursor-pointer"
-                            title="Delete item permanently"
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                      {/* Card Info */}
+                      <div className="flex-1 min-w-0 mb-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <h3 className="font-bold text-gray-900 text-sm truncate leading-snug">
+                            {item.name}
+                          </h3>
                         </div>
-                      </td>
-                    </tr>
+                        {item.description && (
+                          <p className="text-xs text-gray-500 line-clamp-1 mt-0.5 font-normal">
+                            {item.description}
+                          </p>
+                        )}
+                        <p className="text-[11px] font-semibold text-gray-400 mt-1">
+                          {item.categoryName}
+                        </p>
+                      </div>
+
+                      {/* Price & Instant Status Toggle */}
+                      <div className="pt-2 border-t border-[#F3F0E6] flex items-center justify-between mb-3">
+                        <span className="font-black text-gray-900 text-base">
+                          {formatPrice(item.price, currency)}
+                        </span>
+
+                        {/* 0ms Optimistic Toggle Button */}
+                        <button
+                          type="button"
+                          onClick={(e) => handleToggleVisibility(item, e)}
+                          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                            isVisible
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80 hover:bg-emerald-100'
+                              : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                          }`}
+                          title={isVisible ? 'انقر للإخفاء من المنيو' : 'انقر للإظهار في المنيو'}
+                        >
+                          {isVisible ? (
+                            <>
+                              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                              <span>متوفر</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="w-2 h-2 rounded-full bg-gray-400" />
+                              <span>مخفي</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {/* Actions Buttons */}
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(item)}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 bg-gray-50 hover:bg-[#FEF9EE] hover:text-[#D97706] text-gray-700 text-xs font-bold rounded-xl border border-[#EFECE6] transition cursor-pointer"
+                        >
+                          <Edit3 size={14} /> تعديل
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => handleDeleteClick(item, e)}
+                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl border border-[#EFECE6] transition cursor-pointer"
+                          title="حذف الطبق"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            ) : (
+              /* Clean Table / List Layout */
+              <div className="bg-white rounded-2xl border border-[#EFECE6] overflow-hidden shadow-xs">
+                <table className="w-full text-right border-collapse">
+                  <thead>
+                    <tr className="border-b border-[#F3F0E6] bg-gray-50/50 text-[11px] font-bold text-gray-500 uppercase">
+                      <th className="py-3 px-4">الطبق</th>
+                      <th className="py-3 px-4">القسم</th>
+                      <th className="py-3 px-4">السعر</th>
+                      <th className="py-3 px-4 text-center">الحالة</th>
+                      <th className="py-3 px-4 text-left">إجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#F3F0E6] text-sm">
+                    {displayItems.map((item: any) => {
+                      const isVisible = item.isVisible !== false;
 
-          {/* Pagination Footer */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-6 py-4 border-t border-[#F3F0E6] bg-[#FAF9F5]/40">
-            <p className="text-[13px] text-gray-500 font-medium">
-              Showing <span className="font-bold text-gray-700">{displayItems.length > 0 ? (currentPage - 1) * itemsPerPage + 1 : 0}</span> to{' '}
-              <span className="font-bold text-gray-700">{Math.min(currentPage * itemsPerPage, displayItems.length)}</span> of{' '}
-              <span className="font-bold text-gray-700">{displayItems.length}</span> items
-            </p>
+                      return (
+                        <tr key={item.id} className="hover:bg-gray-50/60 transition">
+                          {/* Dish Image & Name */}
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-lg bg-gray-100 shrink-0 overflow-hidden">
+                                {item.images?.[0] || item.imageUrl ? (
+                                  <img
+                                    src={getImageUrl(item.images?.[0]?.url || item.imageUrl)}
+                                    alt={item.name}
+                                    className="w-full h-full object-cover"
+                                    loading="lazy"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-gray-300 text-xs">
+                                    🍽️
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-gray-900 text-sm">{item.name}</h4>
+                                {item.description && (
+                                  <p className="text-xs text-gray-400 line-clamp-1 max-w-xs">
+                                    {item.description}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
 
-            {totalPages > 1 && (
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="p-2 rounded-xl border border-[#F3F0E6] text-gray-500 hover:bg-[#FEF9EE] hover:text-[#D97706] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-500 transition cursor-pointer"
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`min-w-[34px] h-[34px] px-2 rounded-xl text-[13px] font-bold transition cursor-pointer ${
-                      currentPage === page
-                        ? 'bg-[#FEF9EE] text-[#D97706] border border-amber-300 shadow-sm'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="p-2 rounded-xl border border-[#F3F0E6] text-gray-500 hover:bg-[#FEF9EE] hover:text-[#D97706] disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-500 transition cursor-pointer"
-                >
-                  <ChevronRight size={16} />
-                </button>
+                          {/* Category */}
+                          <td className="py-3 px-4 text-xs font-semibold text-gray-500">
+                            {item.categoryName}
+                          </td>
+
+                          {/* Price */}
+                          <td className="py-3 px-4 font-black text-gray-900 text-sm">
+                            {formatPrice(item.price, currency)}
+                          </td>
+
+                          {/* Instant 0ms Status Toggle */}
+                          <td className="py-3 px-4 text-center">
+                            <button
+                              type="button"
+                              onClick={(e) => handleToggleVisibility(item, e)}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                                isVisible
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80 hover:bg-emerald-100'
+                                  : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                              }`}
+                            >
+                              <span
+                                className={`w-2 h-2 rounded-full ${
+                                  isVisible ? 'bg-emerald-500' : 'bg-gray-400'
+                                }`}
+                              />
+                              <span>{isVisible ? 'متوفر' : 'مخفي'}</span>
+                            </button>
+                          </td>
+
+                          {/* Action Buttons */}
+                          <td className="py-3 px-4 text-left">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleEdit(item)}
+                                className="p-1.5 text-gray-600 hover:text-[#D97706] hover:bg-[#FEF9EE] rounded-lg transition cursor-pointer"
+                                title="تعديل"
+                              >
+                                <Edit3 size={15} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(e) => handleDeleteClick(item, e)}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition cursor-pointer"
+                                title="حذف"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
-        </div>
-      ) : (
-        /* Grid Cards View */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
-          {displayItems.map((item: any) => {
-            const discountInfo = evaluateItemDiscount({
-              price: Number(item.price) || 0,
-              originalPrice: item.originalPrice,
-              discountStartsAt: item.discountStartsAt,
-              discountEndsAt: item.discountEndsAt,
-            });
-            const effectivePrice = discountInfo.isActive
-              ? Number(item.price)
-              : (discountInfo.originalPrice != null && discountInfo.originalPrice > Number(item.price)
-                  ? discountInfo.originalPrice
-                  : Number(item.price));
+        </main>
+      </div>
 
-            return (
-              <div
-                key={item.id}
-                className="bg-white rounded-[20px] border border-[#F3F0E6] shadow-sm hover:shadow-xl transition-shadow duration-200 flex flex-col overflow-hidden group"
-              >
-                <div className="relative aspect-[4/3] bg-gray-50 flex-shrink-0 overflow-hidden">
-                  {item.images?.[0] ? (
-                    <img
-                      src={getImageUrl(item.images[0].url)}
-                      alt={item.name}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  ) : item.imageUrl ? (
-                    <img
-                      src={getImageUrl(item.imageUrl)}
-                      alt={item.name}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
-                      <ImageIcon size={32} className="opacity-30 mb-2" />
-                    </div>
-                  )}
-                  {discountInfo.isActive && discountInfo.percentage ? (
-                    <div className="absolute top-3 left-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-black px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1 z-10">
-                      <span>-{discountInfo.percentage}% OFF</span>
-                    </div>
-                  ) : item.badge && BADGE_DEFINITIONS[item.badge as MenuItemBadge] ? (
-                    <div className="absolute top-3 left-3 bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-[11px] font-extrabold px-2.5 py-1 rounded-lg shadow-md flex items-center gap-1 z-10">
-                      <span>{BADGE_DEFINITIONS[item.badge as MenuItemBadge].icon}</span>
-                      <span>{BADGE_DEFINITIONS[item.badge as MenuItemBadge].label}</span>
-                    </div>
-                  ) : null}
-                </div>
+      {/* ========================================================================= */}
+      {/* 3. MODALS & DRAWERS (Loaded dynamically on demand)                        */}
+      {/* ========================================================================= */}
 
-                <div className="p-5 flex flex-col flex-1">
-                  <div className="flex-1">
-                    <h3 className="font-bold text-gray-900 text-lg leading-tight mb-1">{item.name}</h3>
-                    <p className="text-[13px] font-medium text-gray-400 mb-2">{item.categoryName}</p>
-
-                    {Array.isArray(item.tags) && item.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mb-3">
-                        {item.tags.map((t: string) => {
-                          const def = TAG_DEFINITIONS[t as MenuItemTag];
-                          if (!def) return null;
-                          return (
-                            <span
-                              key={t}
-                              className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-[#FAF9F5] border border-[#F3F0E6] text-gray-700 rounded-md text-[10px] font-medium"
-                            >
-                              <span>{def.icon}</span>
-                              <span>{def.label}</span>
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between mb-4">
-                    {discountInfo.isActive ? (
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="font-black text-amber-600 text-lg">{formatPrice(item.price, currency)}</span>
-                        {discountInfo.originalPrice && (
-                          <span className="text-xs text-gray-400 line-through font-semibold">
-                            {formatPrice(discountInfo.originalPrice, currency)}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="font-black text-gray-900 text-lg">{formatPrice(effectivePrice, currency)}</span>
-                    )}
-
-                    {item.isVisible === false ? (
-                      <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-gray-100 text-gray-600 border border-gray-200 rounded-md">
-                        Hidden
-                      </span>
-                    ) : (
-                      <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-[#FEF9EE] text-[#D97706] border border-amber-200/60 rounded-md">
-                        Available
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleEdit(item)}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-[#F3F0E6] hover:border-amber-400 hover:bg-[#FEF9EE]/50 hover:text-[#D97706] text-gray-700 text-sm font-semibold rounded-xl transition-colors cursor-pointer"
-                    >
-                      <Edit3 size={16} className="text-gray-400" /> Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(item)}
-                      className="w-10 flex items-center justify-center border border-[#F3F0E6] hover:border-red-300 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-xl transition-colors cursor-pointer"
-                      title="Delete item permanently"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {/* Edit / Add Item Drawer */}
+      {isDrawerOpen && (
+        <ItemDrawer
+          isOpen={isDrawerOpen}
+          onClose={() => {
+            setIsDrawerOpen(false);
+            setEditingItem(null);
+          }}
+          categories={categories}
+          initialData={editingItem}
+          onSaved={() => fetchMenu(true)}
+          currency={currency}
+        />
       )}
 
-      {/* Drawer */}
-      <AnimatePresence>
-        {isDrawerOpen && (
-          <ItemDrawer
-            isOpen={isDrawerOpen}
-            onClose={() => setIsDrawerOpen(false)}
-            categories={categories}
-            initialData={editingItem}
-            currency={currency}
-            onSaved={() => {
-              setIsDrawerOpen(false);
-              fetchMenu();
-            }}
-          />
-        )}
-        {isCategoryDrawerOpen && (
-          <CategoryDrawer
-            isOpen={isCategoryDrawerOpen}
-            onClose={() => setIsCategoryDrawerOpen(false)}
-            existingCategories={categories}
-            onSaved={() => {
-              setIsCategoryDrawerOpen(false);
-              fetchMenu();
-            }}
-          />
-        )}
-      </AnimatePresence>
+      {/* Edit / Add Category Drawer */}
+      {isCategoryDrawerOpen && (
+        <CategoryDrawer
+          isOpen={isCategoryDrawerOpen}
+          onClose={() => setIsCategoryDrawerOpen(false)}
+          existingCategories={categories}
+          onSaved={() => fetchMenu(true)}
+        />
+      )}
 
-      {/* ================================================================= */}
-      {/* PERMANENT DELETE CONFIRMATION MODAL                                */}
-      {/* ================================================================= */}
+      {/* Delete Confirmation Modal */}
       {deleteConfirmItem && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-gray-900/60 backdrop-blur-sm"
-            onClick={() => !deleting && setDeleteConfirmItem(null)}
-          />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-100">
+            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mb-4">
+              <AlertTriangle size={24} />
+            </div>
+            <h3 className="font-bold text-gray-900 text-lg mb-2">تأكيد حذف الطبق</h3>
+            <p className="text-xs text-gray-600 mb-4 leading-relaxed">
+              هل أنت متأكد من حذف <strong className="text-gray-900">"{deleteConfirmItem.name}"</strong>؟
+              للتأكيد، اكتب اسم الطبق أدناه:
+            </p>
 
-          {/* Modal */}
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            {/* Red top bar */}
-            <div className="h-1.5 bg-gradient-to-r from-red-500 to-red-600 w-full" />
+            <input
+              type="text"
+              value={deleteInput}
+              onChange={(e) => setDeleteInput(e.target.value)}
+              placeholder={deleteConfirmItem.name}
+              className="w-full px-3 py-2 border border-gray-300 rounded-xl text-xs mb-3 text-right focus:outline-none focus:border-red-500"
+              autoFocus
+            />
 
-            <div className="p-6">
-              {/* Icon + Title */}
-              <div className="flex items-start gap-4 mb-5">
-                <div className="w-12 h-12 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
-                  <AlertTriangle size={22} className="text-red-500" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 leading-tight">
-                    Delete Item Permanently
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-1 leading-snug">
-                    This action <span className="font-bold text-red-600">cannot be undone</span>. The item and all its data will be permanently removed from the database.
-                  </p>
-                </div>
-              </div>
+            {deleteError && (
+              <p className="text-xs text-red-600 font-semibold mb-3">{deleteError}</p>
+            )}
 
-              {/* Item preview */}
-              <div className="bg-gray-50 border border-gray-100 rounded-xl p-3.5 mb-5 flex items-center gap-3">
-                {deleteConfirmItem.imageUrl ? (
-                  <img src={deleteConfirmItem.imageUrl} alt="" className="w-12 h-12 rounded-lg object-cover shrink-0 border border-gray-200" />
-                ) : (
-                  <div className="w-12 h-12 rounded-lg bg-gray-200 shrink-0 flex items-center justify-center">
-                    <ImageIcon size={18} className="text-gray-400" />
-                  </div>
-                )}
-                <div>
-                  <p className="font-bold text-gray-900 text-sm">{deleteConfirmItem.name}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {deleteConfirmItem.categoryName} · {formatPrice(deleteConfirmItem.price, currency)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Name confirmation input */}
-              <div className="mb-5">
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                  Type <span className="font-mono bg-gray-100 px-1.5 py-0.5 rounded text-red-600">{deleteConfirmItem.name}</span> to confirm
-                </label>
-                <input
-                  type="text"
-                  value={deleteInput}
-                  onChange={(e) => { setDeleteInput(e.target.value); setDeleteError(''); }}
-                  onKeyDown={(e) => e.key === 'Enter' && handleConfirmDelete()}
-                  placeholder={`Type "${deleteConfirmItem.name}" here...`}
-                  autoFocus
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400/20 transition"
-                />
-                {deleteError && (
-                  <p className="text-xs text-red-600 font-medium mt-1.5">{deleteError}</p>
-                )}
-              </div>
-
-              {/* Buttons */}
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setDeleteConfirmItem(null)}
-                  disabled={deleting}
-                  className="flex-1 px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmDelete}
-                  disabled={deleting || deleteInput.trim().toLowerCase() !== deleteConfirmItem.name.trim().toLowerCase()}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl transition-all shadow-lg shadow-red-600/25 disabled:opacity-40 disabled:shadow-none disabled:cursor-not-allowed cursor-pointer"
-                >
-                  {deleting ? (
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <Trash2 size={15} />
-                      Delete Permanently
-                    </>
-                  )}
-                </button>
-              </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmItem(null)}
+                className="flex-1 py-2 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 transition cursor-pointer"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleting || deleteInput.trim() !== deleteConfirmItem.name.trim()}
+                className="flex-1 py-2 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white text-xs font-bold transition cursor-pointer"
+              >
+                {deleting ? 'جاري الحذف...' : 'حذف نهائياً'}
+              </button>
             </div>
           </div>
         </div>
