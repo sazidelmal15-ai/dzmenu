@@ -594,45 +594,15 @@ export default function MenuPage({ initialCategories = [] }: { initialCategories
 
                       {/* Status Badge */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {discountInfo.isActive && discountInfo.percentage ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-xs">
-                              <span>-{discountInfo.percentage}% OFF</span>
-                            </span>
-                          ) : discountInfo.state === 'scheduled' ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                              <span>⏳ Scheduled</span>
-                            </span>
-                          ) : discountInfo.state === 'expired' ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-500 border border-gray-200">
-                              <span>⏸️ Expired</span>
-                            </span>
-                          ) : null}
-
-                          {item.badge && BADGE_DEFINITIONS[item.badge as MenuItemBadge] && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-xs">
-                              <span>{BADGE_DEFINITIONS[item.badge as MenuItemBadge].icon}</span>
-                              <span>{BADGE_DEFINITIONS[item.badge as MenuItemBadge].label}</span>
-                            </span>
-                          )}
-                          {item.isDeleted ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-50 text-red-600 border border-red-200/60">
-                              <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> Deleted
-                            </span>
-                          ) : item.isVisible === false ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
-                              <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> Hidden
-                            </span>
-                          ) : !item.isAvailable ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200/60">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Unavailable
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Available
-                            </span>
-                          )}
-                        </div>
+                        {item.isVisible === false ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> Hidden
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Available
+                          </span>
+                        )}
                       </td>
 
                       {/* Actions */}
@@ -791,25 +761,9 @@ export default function MenuPage({ initialCategories = [] }: { initialCategories
                       <span className="font-black text-gray-900 text-lg">{formatPrice(effectivePrice, currency)}</span>
                     )}
 
-                    {discountInfo.state === 'scheduled' ? (
-                      <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-amber-50 text-amber-800 border border-amber-200 rounded-md">
-                        Scheduled
-                      </span>
-                    ) : discountInfo.state === 'expired' ? (
-                      <span className="text-[11px] font-medium uppercase tracking-wider px-2.5 py-1 bg-gray-100 text-gray-500 border border-gray-200 rounded-md">
-                        Expired
-                      </span>
-                    ) : item.isDeleted ? (
-                      <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-red-50 text-red-600 rounded-md">
-                        Deleted
-                      </span>
-                    ) : item.isVisible === false ? (
-                      <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-gray-100 text-gray-600 rounded-md">
+                    {item.isVisible === false ? (
+                      <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-gray-100 text-gray-600 border border-gray-200 rounded-md">
                         Hidden
-                      </span>
-                    ) : !item.isAvailable ? (
-                      <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-amber-50 text-amber-700 border border-amber-200/60 rounded-md">
-                        Unavailable
                       </span>
                     ) : (
                       <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-[#FEF9EE] text-[#D97706] border border-amber-200/60 rounded-md">
