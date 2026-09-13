@@ -45,8 +45,8 @@ function getTenantSubdomain(host: string): string | null {
     return null;
   }
 
-  // Configured Root Domain (e.g. yourdomain.com or dzmenu.com)
-  const rootDomain = (process.env.NEXT_PUBLIC_ROOT_DOMAIN || "dzmenu.com").toLowerCase().trim();
+  // Configured Root Domain (e.g. softscape.xyz or dzmenu.com)
+  const rootDomain = (process.env.NEXT_PUBLIC_ROOT_DOMAIN || "softscape.xyz").toLowerCase().trim();
   if (rootDomain && (hostname === rootDomain || hostname === `www.${rootDomain}`)) {
     return null;
   }

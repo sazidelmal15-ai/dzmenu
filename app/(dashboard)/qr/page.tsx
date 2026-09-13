@@ -89,7 +89,7 @@ export default function QrStudioPage() {
       return `${protocol}//${restaurant.slug}.localhost:3000`;
     }
     // Production custom domain or subdomain
-    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "dzmenu.com";
+    const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "softscape.xyz";
     return `${protocol}//${restaurant.slug}.${rootDomain}`;
   }, [restaurant.slug]);
 
