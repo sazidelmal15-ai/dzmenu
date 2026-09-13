@@ -15,7 +15,14 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
 
   const json = await response.json();
   if (!response.ok) {
-    throw new Error(json.message || "API Request failed");
+    let msg = json.message || "API Request failed";
+    if (json.errors?.fieldErrors) {
+      const fieldMsgs = Object.entries(json.errors.fieldErrors)
+        .map(([f, errs]) => `${f}: ${(errs as string[]).join(", ")}`)
+        .join("; ");
+      if (fieldMsgs) msg = `${msg} (${fieldMsgs})`;
+    }
+    throw new Error(msg);
   }
 
   return json.data;

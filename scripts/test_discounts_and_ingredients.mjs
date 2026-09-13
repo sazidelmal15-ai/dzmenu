@@ -299,6 +299,18 @@ test("Discounts Domain & Boundary Testing Suite", async (t) => {
     });
     assert.equal(validUpdate.success, true);
 
+    // Valid discount removal on item with demo/relative image url
+    const discountRemovalUpdate = menuItemUpdateSchema.safeParse({
+      name: "Margherita Special Pizza",
+      price: 1250,
+      originalPrice: null,
+      discountStartsAt: null,
+      discountEndsAt: null,
+      imageUrl: "/images/demo/margherita_special_pizza.jpg",
+      ingredients: ["عجينة نابوليتان مخمرة 48 ساعة", "صلصة طماطم سان مارزانو"],
+    });
+    assert.equal(discountRemovalUpdate.success, true);
+
     // Invalid update: originalPrice <= price
     const invalidUpdate = menuItemUpdateSchema.safeParse({
       price: 1000,

@@ -304,7 +304,13 @@ export const ingredientsSchema = z
 
 export const menuItemCreateSchema = z
   .object({
-    categoryId: z.string().uuid().nullable().optional(),
+    categoryId: z
+      .string()
+      .uuid()
+      .nullable()
+      .optional()
+      .or(z.literal(""))
+      .transform((val) => (val === "" ? null : val)),
     name: z.string().trim().min(1, "Item name is required").max(120, "Item name is too long"),
     description: z.string().trim().max(1000, "Description is too long").nullable().optional(),
     price: z.coerce.number().min(0, "Price must be greater than or equal to 0"),
@@ -315,8 +321,13 @@ export const menuItemCreateSchema = z
       .optional(),
     discountStartsAt: z.string().nullable().optional(),
     discountEndsAt: z.string().nullable().optional(),
-    imageUrl: z.string().url().nullable().optional().or(z.literal("")),
-    badge: z.enum(MENU_ITEM_BADGES).nullable().optional(),
+    imageUrl: z.string().nullable().optional(),
+    badge: z
+      .enum(MENU_ITEM_BADGES)
+      .nullable()
+      .optional()
+      .or(z.literal(""))
+      .transform((val) => (val === "" ? null : val)),
     tags: z.array(z.enum(MENU_ITEM_TAGS)).optional().default([]),
     ingredients: ingredientsSchema,
     isVisible: z.boolean().optional().default(true),
@@ -357,7 +368,13 @@ export const menuItemCreateSchema = z
 
 export const menuItemUpdateSchema = z
   .object({
-    categoryId: z.string().uuid().nullable().optional(),
+    categoryId: z
+      .string()
+      .uuid()
+      .nullable()
+      .optional()
+      .or(z.literal(""))
+      .transform((val) => (val === "" ? null : val)),
     name: z.string().trim().min(1, "Item name is required").max(120).optional(),
     description: z.string().trim().max(1000).nullable().optional(),
     price: z.coerce.number().min(0, "Price must be greater than or equal to 0").optional(),
@@ -368,8 +385,13 @@ export const menuItemUpdateSchema = z
       .optional(),
     discountStartsAt: z.string().nullable().optional(),
     discountEndsAt: z.string().nullable().optional(),
-    imageUrl: z.string().url().nullable().optional().or(z.literal("")),
-    badge: z.enum(MENU_ITEM_BADGES).nullable().optional(),
+    imageUrl: z.string().nullable().optional(),
+    badge: z
+      .enum(MENU_ITEM_BADGES)
+      .nullable()
+      .optional()
+      .or(z.literal(""))
+      .transform((val) => (val === "" ? null : val)),
     tags: z.array(z.enum(MENU_ITEM_TAGS)).optional(),
     ingredients: ingredientsSchema.optional(),
     isVisible: z.boolean().optional(),
@@ -408,3 +430,4 @@ export const menuItemUpdateSchema = z
       path: ["discountEndsAt"],
     }
   );
+
