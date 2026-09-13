@@ -1656,66 +1656,80 @@ export function GourmetMainTemplate({
       </main>
 
       {/* ──────────────────────────────────────────────────────────────────────────
-          3. PERSISTENT 3-TAB BOTTOM NAVIGATION BAR (Screen 1, 2, 4)
+          3. PERSISTENT 3-TAB BOTTOM NAVIGATION BAR (Floating Luxury Dock)
           ────────────────────────────────────────────────────────────────────────── */}
-      <nav className="sticky bottom-0 z-30 shrink-0 bg-[var(--dz-theme-background)] border-t border-[var(--dz-theme-border)] py-2.5 px-6 flex justify-around items-center w-full">
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab("menu");
-            setSelectedCategoryId("all");
-          }}
-          className={`flex flex-col items-center gap-1 transition-all cursor-pointer py-1 ${
-            activeTab === "menu"
-              ? "text-[var(--dz-theme-text)] font-semibold scale-105"
-              : "text-[var(--dz-theme-muted)] hover:text-[var(--dz-theme-text)]"
-          }`}
+      <div className="sticky bottom-0 z-30 shrink-0 w-full px-4 pb-3.5 pt-1 pointer-events-none">
+        <nav
+          className="mx-auto max-w-[340px] w-full bg-[var(--dz-theme-surface)]/95 backdrop-blur-xl border border-[var(--dz-theme-border)] rounded-2xl shadow-[0_10px_30px_-5px_rgba(0,0,0,0.12),0_4px_10px_-2px_rgba(0,0,0,0.06)] p-1.5 flex items-center justify-around gap-1 pointer-events-auto"
+          aria-label="Bottom Navigation"
         >
-          <Utensils className="w-4 h-4" />
-          <span
-            className="text-[10px] font-serif tracking-wider"
-            style={{ fontFamily: "var(--dz-theme-font-serif)" }}
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab("menu");
+              setSelectedCategoryId("all");
+            }}
+            className={`relative flex-1 py-1.5 px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-200 cursor-pointer ${
+              activeTab === "menu"
+                ? "bg-[var(--dz-theme-surface-raised)] text-[var(--dz-theme-text)] font-semibold shadow-2xs"
+                : "text-[var(--dz-theme-muted)] hover:text-[var(--dz-theme-text)] hover:bg-[var(--dz-theme-surface-raised)]/50"
+            }`}
           >
-            Menu
-          </span>
-        </button>
+            <Utensils className="w-4 h-4" />
+            <span
+              className="text-[10px] font-serif tracking-wider"
+              style={{ fontFamily: "var(--dz-theme-font-serif)" }}
+            >
+              Menu
+            </span>
+            {activeTab === "menu" && (
+              <span className="w-1 h-1 rounded-full bg-[var(--dz-theme-accent)] -mt-0.5" />
+            )}
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab("search")}
-          className={`flex flex-col items-center gap-1 transition-all cursor-pointer py-1 ${
-            activeTab === "search"
-              ? "text-[var(--dz-theme-text)] font-semibold scale-105"
-              : "text-[var(--dz-theme-muted)] hover:text-[var(--dz-theme-text)]"
-          }`}
-        >
-          <Search className="w-4 h-4" />
-          <span
-            className="text-[10px] font-serif tracking-wider"
-            style={{ fontFamily: "var(--dz-theme-font-serif)" }}
+          <button
+            type="button"
+            onClick={() => setActiveTab("search")}
+            className={`relative flex-1 py-1.5 px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-200 cursor-pointer ${
+              activeTab === "search"
+                ? "bg-[var(--dz-theme-surface-raised)] text-[var(--dz-theme-text)] font-semibold shadow-2xs"
+                : "text-[var(--dz-theme-muted)] hover:text-[var(--dz-theme-text)] hover:bg-[var(--dz-theme-surface-raised)]/50"
+            }`}
           >
-            Search
-          </span>
-        </button>
+            <Search className="w-4 h-4" />
+            <span
+              className="text-[10px] font-serif tracking-wider"
+              style={{ fontFamily: "var(--dz-theme-font-serif)" }}
+            >
+              Search
+            </span>
+            {activeTab === "search" && (
+              <span className="w-1 h-1 rounded-full bg-[var(--dz-theme-accent)] -mt-0.5" />
+            )}
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab("info")}
-          className={`flex flex-col items-center gap-1 transition-all cursor-pointer py-1 ${
-            activeTab === "info"
-              ? "text-[var(--dz-theme-text)] font-semibold scale-105"
-              : "text-[var(--dz-theme-muted)] hover:text-[var(--dz-theme-text)]"
-          }`}
-        >
-          <Info className="w-4 h-4" />
-          <span
-            className="text-[10px] font-serif tracking-wider"
-            style={{ fontFamily: "var(--dz-theme-font-serif)" }}
+          <button
+            type="button"
+            onClick={() => setActiveTab("info")}
+            className={`relative flex-1 py-1.5 px-2 rounded-xl flex flex-col items-center justify-center gap-1 transition-all duration-200 cursor-pointer ${
+              activeTab === "info"
+                ? "bg-[var(--dz-theme-surface-raised)] text-[var(--dz-theme-text)] font-semibold shadow-2xs"
+                : "text-[var(--dz-theme-muted)] hover:text-[var(--dz-theme-text)] hover:bg-[var(--dz-theme-surface-raised)]/50"
+            }`}
           >
-            Info
-          </span>
-        </button>
-      </nav>
+            <Info className="w-4 h-4" />
+            <span
+              className="text-[10px] font-serif tracking-wider"
+              style={{ fontFamily: "var(--dz-theme-font-serif)" }}
+            >
+              Info
+            </span>
+            {activeTab === "info" && (
+              <span className="w-1 h-1 rounded-full bg-[var(--dz-theme-accent)] -mt-0.5" />
+            )}
+          </button>
+        </nav>
+      </div>
     </div>
   );
 }
