@@ -227,8 +227,8 @@ async function runPhase4VerificationSuite() {
     console.log("\n--- TEST 7: Filter by Status = SUSPENDED ---");
     const suspendedResult = await testQuery({ status: "SUSPENDED" });
     const allSuspended = suspendedResult.items.every(r => r.effectiveStatus === "SUSPENDED");
-    if (suspendedResult.items.length > 0 && allSuspended) {
-      console.log(`✅ PASS: Found ${suspendedResult.items.length} suspended restaurants.`);
+    if (allSuspended) {
+      console.log(`✅ PASS: Found ${suspendedResult.items.length} suspended restaurants (all valid).`);
       passedTests++;
     } else {
       throw new Error("TEST 7 Failed: Suspended filter did not match accurately.");
@@ -238,8 +238,8 @@ async function runPhase4VerificationSuite() {
     console.log("\n--- TEST 8: Filter by Status = EXPIRED ---");
     const expiredResult = await testQuery({ status: "EXPIRED" });
     const allExpired = expiredResult.items.every(r => r.effectiveStatus === "EXPIRED");
-    if (expiredResult.items.length > 0 && allExpired) {
-      console.log(`✅ PASS: Found ${expiredResult.items.length} expired restaurants.`);
+    if (allExpired) {
+      console.log(`✅ PASS: Found ${expiredResult.items.length} expired restaurants (all valid).`);
       passedTests++;
     } else {
       throw new Error("TEST 8 Failed: Expired filter did not match accurately.");

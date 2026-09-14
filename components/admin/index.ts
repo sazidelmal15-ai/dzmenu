@@ -13,4 +13,11 @@ export * from "./RestaurantTableActions";
 export * from "./RestaurantTableToolbar";
 export * from "./RestaurantTableSkeleton";
 export * from "./TablePagination";
+export * from "./RestaurantDetailDrawer";
+export * from "./RestaurantDetailHeader";
+export * from "./RestaurantSubscriptionOverview";
+export * from "./RestaurantActivityFeed";
+export * from "./RestaurantLifecycleActions";
+export * from "./RestaurantDetailSkeleton";
+
 

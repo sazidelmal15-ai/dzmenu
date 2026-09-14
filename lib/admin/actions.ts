@@ -2,6 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { ROUTES } from "@/constants/routes";
+import { requireRole } from "@/lib/permissions/guards";
+import { PLATFORM_ADMIN_ROLES } from "@/constants/roles";
+import { restaurantQueries, auditLogQueries, type AdminRestaurantDetail } from "@/lib/db/queries";
+import type { AdminAuditLog } from "@/types/audit";
 import { adminLifecycleService } from "./lifecycle-service";
 import type { LifecycleActionResult } from "./lifecycle-service";
 
@@ -17,6 +21,44 @@ function getErrorMessage(err: unknown, fallback: string): string {
   }
   return fallback;
 }
+
+/**
+ * Server action to securely retrieve restaurant details and recent activity for the Phase 5 Drawer.
+ */
+export async function getRestaurantDrawerDataAction(
+  restaurantId: string
+): Promise<ActionResult<{ restaurant: AdminRestaurantDetail; recentActivity: AdminAuditLog[] }>> {
+  try {
+    // 1. Enforce platform admin role guard (SUPER_OWNER, SUPPORT_LEAD)
+    await requireRole(PLATFORM_ADMIN_ROLES);
+
+    if (!restaurantId || typeof restaurantId !== "string") {
+      return { success: false, error: "Valid restaurant ID is required" };
+    }
+
+    // 2. Query real restaurant details and recent activity simultaneously
+    const [restaurant, recentActivity] = await Promise.all([
+      restaurantQueries.getDetailForAdmin(restaurantId),
+      auditLogQueries.getByRestaurantId(restaurantId, 10),
+    ]);
+
+    if (!restaurant) {
+      return { success: false, error: "Restaurant tenant not found" };
+    }
+
+    return {
+      success: true,
+      data: {
+        restaurant,
+        recentActivity,
+      },
+    };
+  } catch (err: unknown) {
+    console.error("getRestaurantDrawerDataAction error:", err);
+    return { success: false, error: getErrorMessage(err, "Failed to load restaurant details") };
+  }
+}
+
 
 /**
  * Server action to activate a specific plan with authoritative pricing and flexible duration.

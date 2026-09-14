@@ -41,6 +41,35 @@ export interface AdminRestaurantRow {
   createdAt: Date;
 }
 
+export interface AdminRestaurantDetail {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  coverUrl: string | null;
+  status: string;
+  currency: string;
+  phone: string | null;
+  whatsapp: string | null;
+  city: string | null;
+  address: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  ownerId: string | null;
+  ownerName: string | null;
+  ownerEmail: string | null;
+  ownerPhone: string | null;
+  subscriptionId: string | null;
+  subscriptionStatus: SubscriptionStatus | null;
+  subscriptionPlan: SubscriptionPlan | null;
+  currentPeriodStart: Date | null;
+  currentPeriodEnd: Date | null;
+  effectiveStatus: AdminEffectiveStatus;
+  isTrial: boolean;
+  totalCategories: number;
+  totalMenuItems: number;
+}
+
 export interface AdminRestaurantListOptions {
   page?: number;
   pageSize?: number;
@@ -50,6 +79,7 @@ export interface AdminRestaurantListOptions {
   sortBy?: "name" | "created" | "expiry" | "status";
   sortOrder?: "asc" | "desc";
 }
+
 
 export interface AdminRestaurantListResult {
   items: AdminRestaurantRow[];
@@ -503,6 +533,123 @@ export const restaurantQueries = {
   },
 
   /**
+   * Retrieves comprehensive restaurant tenant details for Platform Admin Drawer.
+   */
+  async getDetailForAdmin(
+    id: string,
+    dbOrTx?: DatabaseAdapter
+  ): Promise<AdminRestaurantDetail | null> {
+    const db = dbOrTx || getDb();
+    const row = await db.queryOne<{
+      id: string;
+      name: string;
+      slug: string;
+      logoUrl: string | null;
+      coverUrl: string | null;
+      status: string;
+      currency: string;
+      phone: string | null;
+      whatsapp: string | null;
+      city: string | null;
+      address: string | null;
+      createdAt: string | Date;
+      updatedAt: string | Date;
+      ownerId: string | null;
+      ownerName: string | null;
+      ownerEmail: string | null;
+      ownerPhone: string | null;
+      subscriptionId: string | null;
+      subscriptionStatus: SubscriptionStatus | null;
+      subscriptionPlan: SubscriptionPlan | null;
+      currentPeriodStart: string | Date | null;
+      currentPeriodEnd: string | Date | null;
+      effectiveStatus: string;
+      isTrial: boolean;
+      totalCategories: string | number;
+      totalMenuItems: string | number;
+    }>(
+      `SELECT 
+         r.id,
+         r.name,
+         r.slug,
+         r.logo_url AS "logoUrl",
+         r.cover_url AS "coverUrl",
+         r.status,
+         r.currency,
+         r.phone,
+         r.whatsapp,
+         r.city,
+         r.address,
+         r.created_at AS "createdAt",
+         r.updated_at AS "updatedAt",
+         u.id AS "ownerId",
+         u.full_name AS "ownerName",
+         u.email AS "ownerEmail",
+         s.id AS "subscriptionId",
+         s.status AS "subscriptionStatus",
+         s.plan AS "subscriptionPlan",
+         s.current_period_start AS "currentPeriodStart",
+         s.current_period_end AS "currentPeriodEnd",
+         CASE
+           WHEN r.status = 'SUSPENDED' OR s.status = 'SUSPENDED' THEN 'SUSPENDED'
+           WHEN (s.status = 'TRIALING' OR s.status = 'TRIAL') AND s.current_period_end > NOW() THEN 'TRIAL'
+           WHEN s.status = 'ACTIVE' AND s.current_period_end > NOW() THEN 'ACTIVE'
+           ELSE 'EXPIRED'
+         END AS "effectiveStatus",
+         CASE
+           WHEN s.status = 'TRIALING' OR s.status = 'TRIAL' OR UPPER(COALESCE(s.plan, '')) LIKE '%TRIAL%' THEN true
+           ELSE false
+         END AS "isTrial",
+         COALESCE((SELECT COUNT(*)::int FROM categories c WHERE c.restaurant_id = r.id AND c.deleted_at IS NULL), 0) AS "totalCategories",
+         COALESCE((SELECT COUNT(*)::int FROM menu_items mi WHERE mi.restaurant_id = r.id AND mi.deleted_at IS NULL), 0) AS "totalMenuItems"
+       FROM restaurants r
+       LEFT JOIN (
+         SELECT DISTINCT ON (restaurant_id) restaurant_id, user_id
+         FROM restaurant_members
+         WHERE role = 'RESTAURANT_OWNER'
+         ORDER BY restaurant_id, created_at ASC
+       ) rm ON rm.restaurant_id = r.id
+       LEFT JOIN users u ON u.id = rm.user_id
+       LEFT JOIN subscriptions s ON s.restaurant_id = r.id
+       WHERE r.id = $1 AND r.deleted_at IS NULL`,
+      [id]
+    );
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      logoUrl: row.logoUrl,
+      coverUrl: row.coverUrl,
+      status: row.status,
+      currency: row.currency || "DZD",
+      phone: row.phone,
+      whatsapp: row.whatsapp,
+      city: row.city,
+      address: row.address,
+      createdAt: new Date(row.createdAt),
+      updatedAt: new Date(row.updatedAt),
+      ownerId: row.ownerId,
+      ownerName: row.ownerName,
+      ownerEmail: row.ownerEmail,
+      ownerPhone: null,
+      subscriptionId: row.subscriptionId,
+      subscriptionStatus: row.subscriptionStatus,
+      subscriptionPlan: row.subscriptionPlan,
+      currentPeriodStart: row.currentPeriodStart ? new Date(row.currentPeriodStart) : null,
+      currentPeriodEnd: row.currentPeriodEnd ? new Date(row.currentPeriodEnd) : null,
+      effectiveStatus: row.effectiveStatus as AdminEffectiveStatus,
+      isTrial: Boolean(row.isTrial),
+      totalCategories: Number(row.totalCategories),
+      totalMenuItems: Number(row.totalMenuItems),
+    };
+  },
+
+  /**
    * Retrieves live aggregated KPI metrics for Mission Control.
    */
   async getPlatformKpiStats(dbOrTx?: DatabaseAdapter): Promise<PlatformKpiStats> {
@@ -534,4 +681,5 @@ export const restaurantQueries = {
     };
   },
 };
+
 

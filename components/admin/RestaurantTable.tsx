@@ -1,16 +1,19 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import Link from "next/link";
-import { Store, RotateCcw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Store, RotateCcw, ChevronRight } from "lucide-react";
 import type { AdminRestaurantRow } from "@/lib/db/queries";
 import { StatusBadge } from "./StatusBadge";
 import { RestaurantTableActions } from "./RestaurantTableActions";
+import { RestaurantDetailDrawer } from "./RestaurantDetailDrawer";
 import { getPlanDefinition } from "@/constants/subscriptions";
 
 interface RestaurantTableProps {
   restaurants: AdminRestaurantRow[];
   isFiltered?: boolean;
 }
-
 
 function formatDate(date: Date | null): string {
   if (!date) return "—";
@@ -68,6 +71,23 @@ export function RestaurantTable({
   restaurants,
   isFiltered = false,
 }: RestaurantTableProps) {
+  const router = useRouter();
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  const handleRowClick = (restaurant: AdminRestaurantRow) => {
+    setSelectedRestaurantId(restaurant.id);
+    setIsDrawerOpen(true);
+  };
+
+  const handleDrawerClose = () => {
+    setIsDrawerOpen(false);
+  };
+
+  const handleRestaurantUpdated = () => {
+    router.refresh();
+  };
+
   if (restaurants.length === 0) {
     return (
       <div className="bg-white border border-dashed border-zinc-300 rounded-xl p-8 sm:p-12 text-center flex flex-col items-center justify-center my-4 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
@@ -98,150 +118,171 @@ export function RestaurantTable({
   }
 
   return (
-    <div className="bg-white border border-zinc-200/80 rounded-xl overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse min-w-[780px]">
-          <thead>
-            <tr className="border-b border-zinc-200/80 bg-zinc-50/75">
-              <th
-                scope="col"
-                className="py-3 px-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider"
-              >
-                Restaurant
-              </th>
-              <th
-                scope="col"
-                className="py-3 px-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider"
-              >
-                Owner
-              </th>
-              <th
-                scope="col"
-                className="py-3 px-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider"
-              >
-                Status
-              </th>
-              <th
-                scope="col"
-                className="py-3 px-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider"
-              >
-                Plan
-              </th>
-              <th
-                scope="col"
-                className="py-3 px-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider"
-              >
-                Subscription Expiry
-              </th>
-              <th
-                scope="col"
-                className="py-3 px-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider"
-              >
-                Created
-              </th>
-              <th
-                scope="col"
-                className="py-3 px-4 text-right text-[11px] font-semibold text-zinc-500 uppercase tracking-wider"
-              >
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-zinc-100 text-xs">
-            {restaurants.map((restaurant) => {
-              const expiryMeta = getExpiryHelper(
-                restaurant.subscriptionExpiresAt,
-                restaurant.effectiveStatus
-              );
-              const planName = getPlanLabel(restaurant.subscriptionPlan);
-              const initials = restaurant.name
-                .split(" ")
-                .map((n) => n[0])
-                .slice(0, 2)
-                .join("")
-                .toUpperCase();
-
-              return (
-                <tr
-                  key={restaurant.id}
-                  className="hover:bg-zinc-50/60 transition-colors group"
+    <>
+      <div className="bg-white border border-zinc-200/80 rounded-xl overflow-hidden shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[780px]">
+            <thead>
+              <tr className="border-b border-zinc-200/80 bg-zinc-50/75">
+                <th
+                  scope="col"
+                  className="py-3 px-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider"
                 >
-                  {/* 1. Restaurant Name & Slug */}
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-3">
-                      {/* Avatar / Monogram */}
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 border border-zinc-200/80 text-zinc-700 font-bold text-xs flex-shrink-0 group-hover:border-zinc-300 transition">
-                        {initials || <Store className="h-4 w-4 text-zinc-400" />}
-                      </div>
+                  Restaurant
+                </th>
+                <th
+                  scope="col"
+                  className="py-3 px-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider"
+                >
+                  Owner
+                </th>
+                <th
+                  scope="col"
+                  className="py-3 px-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider"
+                >
+                  Status
+                </th>
+                <th
+                  scope="col"
+                  className="py-3 px-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider"
+                >
+                  Plan
+                </th>
+                <th
+                  scope="col"
+                  className="py-3 px-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider"
+                >
+                  Subscription Expiry
+                </th>
+                <th
+                  scope="col"
+                  className="py-3 px-4 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider"
+                >
+                  Created
+                </th>
+                <th
+                  scope="col"
+                  className="py-3 px-4 text-right text-[11px] font-semibold text-zinc-500 uppercase tracking-wider"
+                >
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100 text-xs">
+              {restaurants.map((restaurant) => {
+                const expiryMeta = getExpiryHelper(
+                  restaurant.subscriptionExpiresAt,
+                  restaurant.effectiveStatus
+                );
+                const planName = getPlanLabel(restaurant.subscriptionPlan);
+                const initials = restaurant.name
+                  .split(" ")
+                  .map((n) => n[0])
+                  .slice(0, 2)
+                  .join("")
+                  .toUpperCase();
 
-                      <div className="min-w-0">
-                        <div className="font-semibold text-zinc-900 truncate tracking-tight text-xs sm:text-sm">
-                          {restaurant.name}
+                const isRowSelected = selectedRestaurantId === restaurant.id && isDrawerOpen;
+
+                return (
+                  <tr
+                    key={restaurant.id}
+                    onClick={() => handleRowClick(restaurant)}
+                    className={`transition-colors cursor-pointer group ${
+                      isRowSelected
+                        ? "bg-zinc-100/80 ring-1 ring-inset ring-zinc-300"
+                        : "hover:bg-zinc-50/75"
+                    }`}
+                  >
+                    {/* 1. Restaurant Name & Slug */}
+                    <td className="py-3.5 px-4">
+                      <div className="flex items-center gap-3">
+                        {/* Avatar / Monogram */}
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-100 border border-zinc-200/80 text-zinc-700 font-bold text-xs flex-shrink-0 group-hover:border-zinc-400 group-hover:bg-white transition">
+                          {initials || <Store className="h-4 w-4 text-zinc-400" />}
                         </div>
-                        <div className="flex items-center gap-1 mt-0.5">
-                          <span className="text-[11px] text-zinc-400 font-mono">
-                            /{restaurant.slug}
-                          </span>
+
+                        <div className="min-w-0">
+                          <div className="font-semibold text-zinc-900 group-hover:text-zinc-950 truncate tracking-tight text-xs sm:text-sm flex items-center gap-1.5">
+                            <span>{restaurant.name}</span>
+                            <ChevronRight className="h-3 w-3 text-zinc-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            <span className="text-[11px] text-zinc-400 font-mono">
+                              /{restaurant.slug}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* 2. Owner Information */}
-                  <td className="py-3.5 px-4">
-                    {restaurant.ownerEmail ? (
-                      <div className="min-w-0">
-                        <div className="text-xs font-medium text-zinc-800 truncate">
-                          {restaurant.ownerName || "Tenant Owner"}
+                    {/* 2. Owner Information */}
+                    <td className="py-3.5 px-4">
+                      {restaurant.ownerEmail ? (
+                        <div className="min-w-0">
+                          <div className="text-xs font-medium text-zinc-800 truncate">
+                            {restaurant.ownerName || "Tenant Owner"}
+                          </div>
+                          <div className="text-[11px] text-zinc-400 font-mono truncate">
+                            {restaurant.ownerEmail}
+                          </div>
                         </div>
-                        <div className="text-[11px] text-zinc-400 font-mono truncate">
-                          {restaurant.ownerEmail}
+                      ) : (
+                        <span className="text-zinc-400 font-mono text-xs">—</span>
+                      )}
+                    </td>
+
+                    {/* 3. Lifecycle Status */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <StatusBadge status={restaurant.effectiveStatus} size="sm" />
+                    </td>
+
+                    {/* 4. Plan Identity */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-zinc-100 text-zinc-800 border border-zinc-200/70">
+                        {planName}
+                      </span>
+                    </td>
+
+                    {/* 5. Subscription Expiry */}
+                    <td className="py-3.5 px-4 whitespace-nowrap">
+                      <div>
+                        <div className="font-mono text-xs text-zinc-800">
+                          {formatDate(restaurant.subscriptionExpiresAt)}
+                        </div>
+                        <div className={`text-[10px] font-mono mt-0.5 ${expiryMeta.color}`}>
+                          {expiryMeta.label}
                         </div>
                       </div>
-                    ) : (
-                      <span className="text-zinc-400 font-mono text-xs">—</span>
-                    )}
-                  </td>
+                    </td>
 
-                  {/* 3. Lifecycle Status */}
-                  <td className="py-3.5 px-4 whitespace-nowrap">
-                    <StatusBadge status={restaurant.effectiveStatus} size="sm" />
-                  </td>
+                    {/* 6. Created Date */}
+                    <td className="py-3.5 px-4 whitespace-nowrap font-mono text-xs text-zinc-500">
+                      {formatDate(restaurant.createdAt)}
+                    </td>
 
-                  {/* 4. Plan Identity */}
-                  <td className="py-3.5 px-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-zinc-100 text-zinc-800 border border-zinc-200/70">
-                      {planName}
-                    </span>
-                  </td>
-
-                  {/* 5. Subscription Expiry */}
-                  <td className="py-3.5 px-4 whitespace-nowrap">
-                    <div>
-                      <div className="font-mono text-xs text-zinc-800">
-                        {formatDate(restaurant.subscriptionExpiresAt)}
-                      </div>
-                      <div className={`text-[10px] font-mono mt-0.5 ${expiryMeta.color}`}>
-                        {expiryMeta.label}
-                      </div>
-                    </div>
-                  </td>
-
-                  {/* 6. Created Date */}
-                  <td className="py-3.5 px-4 whitespace-nowrap font-mono text-xs text-zinc-500">
-                    {formatDate(restaurant.createdAt)}
-                  </td>
-
-                  {/* 7. Quick Lifecycle Actions */}
-                  <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                    <RestaurantTableActions restaurant={restaurant} />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    {/* 7. Quick Lifecycle Actions (stop propagation to prevent drawer open on menu click) */}
+                    <td
+                      className="py-3.5 px-4 text-right whitespace-nowrap"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <RestaurantTableActions restaurant={restaurant} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+
+      {/* Phase 5 Restaurant Detail Drawer */}
+      <RestaurantDetailDrawer
+        restaurantId={selectedRestaurantId}
+        isOpen={isDrawerOpen}
+        onClose={handleDrawerClose}
+        onRestaurantUpdated={handleRestaurantUpdated}
+      />
+    </>
   );
 }
