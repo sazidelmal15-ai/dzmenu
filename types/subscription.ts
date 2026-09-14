@@ -1,18 +1,17 @@
-/**
- * Subscription status enum.
- */
 export type SubscriptionStatus =
   | "TRIALING"
+  | "TRIAL"
   | "ACTIVE"
   | "PAST_DUE"
   | "CANCELED"
   | "EXPIRED"
-  | "INACTIVE";
+  | "INACTIVE"
+  | "SUSPENDED";
 
 /**
  * Subscription plan identifier.
  */
-export type SubscriptionPlan = "STANDARD_ANNUAL";
+export type SubscriptionPlan = "STANDARD_ANNUAL" | "TRIAL_14_DAYS" | "FREE_TRIAL" | "CUSTOM";
 
 /**
  * Subscription model attached to a restaurant tenant.

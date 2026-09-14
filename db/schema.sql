@@ -592,3 +592,33 @@ CREATE INDEX IF NOT EXISTS idx_restaurants_active_theme
     ON restaurants(active_theme_id);
 
 
+-- ==============================================================================
+-- 15. ADMIN AUDIT LOGS TABLE
+-- Immutable server-side record of all sensitive lifecycle and admin actions.
+-- ==============================================================================
+
+CREATE TABLE IF NOT EXISTS admin_audit_logs (
+    id                    UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+    actor_id              UUID          NULL REFERENCES users(id) ON DELETE SET NULL,
+    actor_email           VARCHAR(255)  NOT NULL,
+    action                VARCHAR(100)  NOT NULL,
+    target_restaurant_id  UUID          NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+    target_restaurant_name VARCHAR(255) NOT NULL,
+    previous_state        JSONB         NULL,
+    new_state             JSONB         NULL,
+    reason                TEXT          NULL,
+    metadata              JSONB         NOT NULL DEFAULT '{}'::jsonb,
+    created_at            TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_restaurant 
+    ON admin_audit_logs(target_restaurant_id);
+
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_actor 
+    ON admin_audit_logs(actor_id);
+
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_action 
+    ON admin_audit_logs(action);
+
+CREATE INDEX IF NOT EXISTS idx_admin_audit_logs_created_at 
+    ON admin_audit_logs(created_at DESC);

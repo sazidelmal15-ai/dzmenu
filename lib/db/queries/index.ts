@@ -6,3 +6,4 @@ export * from "./categories";
 export * from "./menu-items";
 export * from "./themes";
 export * from "./analytics";
+export * from "./audit-logs";
