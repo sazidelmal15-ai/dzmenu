@@ -924,7 +924,7 @@ export default function CustomerMenuClient({
               className="flex flex-col items-center justify-center bg-white text-black px-3.5 py-1.5 rounded-2xl font-bold shadow-md transition active:scale-95 cursor-pointer"
             >
               <Home size={16} />
-              <span className="text-[9px] font-extrabold mt-0.5">الرئيسية</span>
+              <span className="text-[9px] font-extrabold mt-0.5">Home</span>
             </button>
           </div>
         </div>

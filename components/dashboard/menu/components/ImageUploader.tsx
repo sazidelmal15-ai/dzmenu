@@ -111,7 +111,7 @@ export default function ImageUploader({ images, onChange, preset = '4:3' }: Prop
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-gray-300">Images</h3>
         <span className="text-[11px] text-gray-500 font-medium">
-          يتم فتح أداة التأطير التلقائي لضبط الأبعاد
+          Auto-framing tool adjusts image dimensions
         </span>
       </div>
 
@@ -137,7 +137,7 @@ export default function ImageUploader({ images, onChange, preset = '4:3' }: Prop
                   type="button"
                   onClick={() => openRecrop(img)}
                   className="p-2 bg-amber-500/30 text-amber-300 rounded-full hover:bg-amber-500 hover:text-black transition-colors cursor-pointer"
-                  title="تعديل وتأطير الصورة"
+                  title="Edit & Frame Image"
                 >
                   <Crop size={18} />
                 </button>
@@ -145,7 +145,7 @@ export default function ImageUploader({ images, onChange, preset = '4:3' }: Prop
                   type="button"
                   onClick={() => removeImage(img.id)}
                   className="p-2 bg-red-500/30 text-red-400 rounded-full hover:bg-red-500 hover:text-white transition-colors cursor-pointer"
-                  title="حذف الصورة"
+                  title="Remove Image"
                 >
                   <X size={18} />
                 </button>
@@ -166,8 +166,8 @@ export default function ImageUploader({ images, onChange, preset = '4:3' }: Prop
           }`}
         >
           <Upload className={`w-8 h-8 mb-2 ${isDragging ? 'text-blue-500' : 'text-gray-500'}`} />
-          <span className="text-xs text-gray-400 font-medium">رفع وتأطير صورة</span>
-          <span className="text-[10px] text-gray-500 mt-0.5">قص وضغط فوري</span>
+          <span className="text-xs text-gray-400 font-medium">Upload & Frame Image</span>
+          <span className="text-[10px] text-gray-500 mt-0.5">Instant crop & compression</span>
         </div>
       </div>
 
@@ -186,7 +186,7 @@ export default function ImageUploader({ images, onChange, preset = '4:3' }: Prop
           imageSource={activeFileForFraming}
           initialPreset={preset}
           initialFraming={activeInitialFraming}
-          title="تأطير وتعديل أبعاد صورة الوجبة"
+          title="Frame & Adjust Item Image"
           onClose={() => {
             setFramingModalOpen(false);
             setActiveFileForFraming(null);

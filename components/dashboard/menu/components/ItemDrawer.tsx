@@ -805,9 +805,6 @@ export default function ItemDrawer({
                 <div>
                   <label className="block text-[13px] font-semibold text-gray-700 mb-1.5">
                     Regular Price <span className="text-red-500">*</span>
-                    <span className="text-xs text-gray-400 font-normal ml-1.5">
-                      (السعر العادي)
-                    </span>
                   </label>
                   <div className="relative">
                     <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-bold">
@@ -924,9 +921,6 @@ export default function ItemDrawer({
                   <div>
                     <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
                       <span>Promotion & Special Offer</span>
-                      <span className="text-xs font-normal text-amber-700">
-                        (العروض والخصومات)
-                      </span>
                     </h3>
                     <p className="text-xs text-gray-500 mt-0.5">
                       Set a promotional price and schedule a temporary discount window
@@ -981,9 +975,6 @@ export default function ItemDrawer({
                           <label className="block text-xs font-bold text-gray-800 mb-1.5 flex items-center justify-between">
                             <span>
                               Promotional Price <span className="text-red-500">*</span>
-                            </span>
-                            <span className="text-[11px] font-normal text-amber-700">
-                              (السعر بعد الخصم)
                             </span>
                           </label>
                           <div className="relative">
@@ -1052,7 +1043,7 @@ export default function ItemDrawer({
                             />
                             <span className="text-xs font-bold text-gray-800 flex items-center gap-1.5">
                               <Calendar size={14} className="text-amber-500" />
-                              <span>Schedule Promotion Window (جدولة فترة العرض)</span>
+                              <span>Schedule Promotion Window</span>
                             </span>
                           </label>
 
@@ -1071,7 +1062,7 @@ export default function ItemDrawer({
                             {/* Quick Scheduling Presets Chips */}
                             <div>
                               <span className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2">
-                                Quick Presets (خيارات الجدولة السريعة):
+                                Quick Presets:
                               </span>
                               <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
                                 <button
@@ -1109,7 +1100,7 @@ export default function ItemDrawer({
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                               <div>
                                 <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center justify-between">
-                                  <span>Starts At (يبدأ في)</span>
+                                  <span>Starts At</span>
                                   {discountStartsAt && (
                                     <span className="text-[11px] font-semibold text-amber-700">
                                       {formatFriendlyDate(parseDateTimeLocal(discountStartsAt))}
@@ -1126,7 +1117,7 @@ export default function ItemDrawer({
 
                               <div>
                                 <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center justify-between">
-                                  <span>Ends At (ينتهي في)</span>
+                                  <span>Ends At</span>
                                   {discountEndsAt && (
                                     <span className="text-[11px] font-semibold text-amber-700">
                                       {formatFriendlyDate(parseDateTimeLocal(discountEndsAt))}
@@ -1292,7 +1283,7 @@ export default function ItemDrawer({
                           className="text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 cursor-pointer"
                         >
                           <Trash2 size={13} />
-                          <span>Remove Promotion (حذف الخصم)</span>
+                          <span>Remove Promotion</span>
                         </button>
                       </div>
                     </div>
@@ -1311,7 +1302,7 @@ export default function ItemDrawer({
             <div className="flex items-center gap-2 mb-1.5">
               <UtensilsCrossed size={16} className="text-amber-500" />
               <h3 className="text-base font-bold text-gray-900">
-                Ingredients & Components (المقادير والمكونات)
+                Ingredients & Components
               </h3>
             </div>
             <p className="text-xs text-gray-500 mb-4">
@@ -1371,7 +1362,7 @@ export default function ItemDrawer({
                         type="button"
                         onClick={() => moveIngredientUp(idx)}
                         disabled={idx === 0}
-                        title="Move Up (تحريك للأعلى)"
+                        title="Move Up"
                         className="p-1 rounded-md text-gray-400 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer"
                       >
                         <ChevronUp size={14} />
@@ -1380,7 +1371,7 @@ export default function ItemDrawer({
                         type="button"
                         onClick={() => moveIngredientDown(idx)}
                         disabled={idx === ingredients.length - 1}
-                        title="Move Down (تحريك للأسفل)"
+                        title="Move Down"
                         className="p-1 rounded-md text-gray-400 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-20 disabled:hover:bg-transparent cursor-pointer"
                       >
                         <ChevronDown size={14} />
@@ -1388,7 +1379,7 @@ export default function ItemDrawer({
                       <button
                         type="button"
                         onClick={() => removeIngredient(idx)}
-                        title="Remove Ingredient (حذف)"
+                        title="Remove Ingredient"
                         className="p-1 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer ml-1"
                       >
                         <Trash2 size={13} />

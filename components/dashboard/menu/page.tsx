@@ -10,8 +10,6 @@ import {
   LayoutGrid,
   List,
   Trash2,
-  Download,
-  Upload,
   Edit3,
   Image as ImageIcon,
   AlertTriangle,
@@ -289,12 +287,6 @@ export default function MenuPage({ initialCategories = [] }: { initialCategories
         </div>
 
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#F3F0E6] bg-white text-sm font-semibold text-gray-700 hover:bg-[#FAF9F5] hover:text-gray-900 transition-colors shadow-sm">
-            <Upload size={16} className="text-gray-400" /> Import
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#F3F0E6] bg-white text-sm font-semibold text-gray-700 hover:bg-[#FAF9F5] hover:text-gray-900 transition-colors shadow-sm">
-            <Download size={16} className="text-gray-400" /> Export
-          </button>
           <button
             onClick={() => setIsCategoryDrawerOpen(true)}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-amber-500 bg-white text-sm font-bold text-amber-600 hover:bg-[#FEF9EE] transition-colors shadow-sm"

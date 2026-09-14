@@ -271,7 +271,7 @@ export default function CategoryDrawer({ isOpen, onClose, onSaved, existingCateg
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.message || 'فشل رفع صورة القسم');
+      throw new Error(err.message || 'Failed to upload category image');
     }
 
     const json = await res.json();
@@ -997,7 +997,7 @@ export default function CategoryDrawer({ isOpen, onClose, onSaved, existingCateg
                       {optimizingImage ? (
                         <div className="flex flex-col items-center justify-center gap-2 p-4 text-center">
                           <div className="w-7 h-7 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                          <span className="text-xs font-semibold text-amber-700">جاري ضغط الصورة لـ WebP...</span>
+                          <span className="text-xs font-semibold text-amber-700">Compressing image to WebP...</span>
                         </div>
                       ) : editImageUrl ? (
                         <>
@@ -1033,10 +1033,10 @@ export default function CategoryDrawer({ isOpen, onClose, onSaved, existingCateg
                     {imageOptimizationInfo && (
                       <div className="mt-2 flex items-center justify-between text-[11px] text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200/50">
                         <span className="font-semibold flex items-center gap-1">
-                          <Sparkles size={13} /> تم الضغط لـ WebP
+                          <Sparkles size={13} /> Compressed to WebP
                         </span>
                         <span className="font-bold">
-                          {(imageOptimizationInfo.optimizedSize / 1024).toFixed(0)} KB (وفّر{' '}
+                          {(imageOptimizationInfo.optimizedSize / 1024).toFixed(0)} KB (Saved{' '}
                           {Math.round((1 - imageOptimizationInfo.optimizedSize / imageOptimizationInfo.originalSize) * 100)}%)
                         </span>
                       </div>

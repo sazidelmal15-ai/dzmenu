@@ -255,7 +255,7 @@ export default function IconLibraryModal({ isOpen, onClose, onSelectIcon, curren
                 {/* AVAILABLE COLLECTIONS HEADER */}
                 <div className="flex items-center justify-between pt-2">
                   <h3 className="text-sm sm:text-base font-bold text-gray-900">
-                    Available Collections (المكتبات المتاحة)
+                    Available Collections
                   </h3>
                   <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200/60">
                     Official Pack Loaded
@@ -311,7 +311,7 @@ export default function IconLibraryModal({ isOpen, onClose, onSelectIcon, curren
 
                       {/* Bottom Open Link */}
                       <div className="flex items-center justify-between text-xs font-bold text-amber-700 group-hover:text-amber-800">
-                        <span>Open Library (فتح الحزمة)</span>
+                        <span>Open Library</span>
                         <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
                       </div>
                     </div>
@@ -399,7 +399,7 @@ export default function IconLibraryModal({ isOpen, onClose, onSelectIcon, curren
                       </span>
                     </div>
                     <p className="text-xs text-gray-500">
-                      اختر النمط المناسب واضغط على أيقونة الأكلة لتعيينها فوراً للقسم
+                      Select your preferred style and click an icon to set it for your category.
                     </p>
                   </div>
                 </div>
@@ -409,7 +409,7 @@ export default function IconLibraryModal({ isOpen, onClose, onSelectIcon, curren
                   <div className="flex items-center justify-between text-xs font-bold text-gray-200">
                     <span className="flex items-center gap-1.5">
                       <Sparkles size={14} className="text-amber-400" />
-                      Render Style (نمط العرض):
+                      Render Style:
                     </span>
                     <span className="text-amber-400">{activeStyle.toUpperCase()} STYLE</span>
                   </div>
@@ -479,10 +479,10 @@ export default function IconLibraryModal({ isOpen, onClose, onSelectIcon, curren
                       </div>
                       <div>
                         <span className="text-xs font-bold text-gray-900 block leading-tight">
-                          Brand Tint Color (تخصيص لون هوية المطعم):
+                          Brand Tint Color:
                         </span>
                         <span className="text-[11px] text-gray-500 block leading-tight mt-0.5">
-                          اختر لوناً سريعاً، أو من جدول الألوان، أو اكتب كود الـ HEX
+                          Choose a preset swatch, pick from color wheel, or enter HEX code
                         </span>
                       </div>
                     </div>
@@ -512,7 +512,7 @@ export default function IconLibraryModal({ isOpen, onClose, onSelectIcon, curren
                       </div>
 
                       {/* Custom Color Wheel / Native Picker Trigger */}
-                      <div className="relative group" title="فتح جدول الألوان (Color Picker)">
+                      <div className="relative group" title="Color Picker">
                         <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-rose-500 via-amber-400 to-indigo-500 p-0.5 shadow-xs cursor-pointer hover:scale-105 transition-transform flex items-center justify-center">
                           <div className="w-full h-full bg-white rounded-[9px] flex items-center justify-center hover:bg-transparent transition-colors group-hover:text-white text-gray-700">
                             <Pipette size={14} className="group-hover:text-white" />
@@ -556,7 +556,7 @@ export default function IconLibraryModal({ isOpen, onClose, onSelectIcon, curren
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="ابحث عن أكلة (برجر، بيتزا، قهوة، ستيك، حلويات، شاورما)..."
+                      placeholder="Search food icons (burger, pizza, coffee, steak, dessert, taco)..."
                       className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm text-gray-900 focus:outline-none focus:border-amber-500 focus:bg-white"
                     />
                   </div>
