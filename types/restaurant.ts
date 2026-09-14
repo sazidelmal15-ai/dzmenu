@@ -1,3 +1,5 @@
+import type { OperatingHourDaySchedule } from "@/types/theme-contract";
+
 /**
  * Restaurant tenant status (supports soft deletes via ARCHIVED/SUSPENDED/INACTIVE).
  */
@@ -22,7 +24,7 @@ export interface Restaurant {
   address: string | null;
   googleMapsUrl: string | null;
   alwaysOpen: boolean;
-  operatingHours: any[];
+  operatingHours: OperatingHourDaySchedule[];
   tiktokUrl: string | null;
   instagramUrl: string | null;
   facebookUrl: string | null;
@@ -52,7 +54,7 @@ export interface RestaurantProfileUpdatePayload {
   address?: string | null;
   googleMapsUrl?: string | null;
   alwaysOpen?: boolean;
-  operatingHours?: any[];
+  operatingHours?: OperatingHourDaySchedule[];
   tiktokUrl?: string | null;
   instagramUrl?: string | null;
   facebookUrl?: string | null;

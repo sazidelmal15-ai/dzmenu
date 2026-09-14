@@ -309,11 +309,11 @@ async function runPhase5VerificationSuite() {
     }
 
     // 14. Scope Protection Verification
-    console.log("\n--- TEST 14: Strict Scope Protection Check (No Phase 6 or 7) ---");
-    const auditPageContent = fs.readFileSync('app/admin/audit/page.tsx', 'utf8');
-    const isPhase6Placeholder = auditPageContent.includes('Phase 6');
-    if (isPhase6Placeholder) {
-      console.log("✅ PASS: Global Audit Log (/admin/audit) remains untouched as Phase 6 placeholder; Phase 5 scope strictly guarded.");
+    console.log("\n--- TEST 14: Strict Scope Protection Check (No Phase 6C or 7 Leak) ---");
+    const drawerExists = fs.existsSync('components/admin/audit/AuditDetailDrawer.tsx');
+    const phase7Exists = fs.existsSync('components/admin/security');
+    if (!drawerExists && !phase7Exists) {
+      console.log("✅ PASS: Phase 6C Audit Detail Drawer not prematurely implemented; Phase 7 features strictly isolated.");
       passedTests++;
     } else {
       throw new Error("TEST 14 Failed: Scope leak detected.");

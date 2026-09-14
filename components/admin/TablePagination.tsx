@@ -9,6 +9,7 @@ interface TablePaginationProps {
   pageSize: number;
   total: number;
   totalPages: number;
+  itemLabel?: string;
 }
 
 export function TablePagination({
@@ -16,6 +17,7 @@ export function TablePagination({
   pageSize,
   total,
   totalPages,
+  itemLabel = "tenants",
 }: TablePaginationProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -55,7 +57,7 @@ export function TablePagination({
         <span className="font-semibold text-zinc-900 font-mono">
           {total}
         </span>
-        <span> tenants</span>
+        <span> {itemLabel}</span>
       </div>
 
       {/* Pagination Controls */}

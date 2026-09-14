@@ -19,5 +19,7 @@ export * from "./RestaurantSubscriptionOverview";
 export * from "./RestaurantActivityFeed";
 export * from "./RestaurantLifecycleActions";
 export * from "./RestaurantDetailSkeleton";
+export * from "./audit";
+
 
 
