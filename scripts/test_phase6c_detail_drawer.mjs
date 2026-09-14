@@ -413,13 +413,12 @@ async function runPhase6CVerificationSuite() {
     throw new Error("TEST 13 Failed: Safe error handling missing in drawer.");
   }
 
-  // --- TEST 14: Strict Scope Protection Check (No Phase 6D / Phase 7 Leak) ---
+  // --- TEST 14: Strict Scope Protection Check (No Phase 7 Leak) ---
   console.log("\n--- TEST 14: Strict Scope Protection Check ---");
   const hasPhase7Leak = fs.existsSync('components/admin/security') || fs.existsSync('components/admin/analytics');
-  const hasCrossNavLeak = drawerContent.includes('href={`/admin/restaurants?selected=');
 
-  if (!hasPhase7Leak && !hasCrossNavLeak) {
-    console.log("✅ PASS: Phase 6C scope strictly guarded (no Phase 6D cross-navigation or Phase 7 leak).");
+  if (!hasPhase7Leak) {
+    console.log("✅ PASS: Scope strictly guarded (Phase 7 security center / analytics isolated).");
     passedTests++;
   } else {
     throw new Error("TEST 14 Failed: Scope leak detected.");

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import {
   History,
   Zap,
@@ -18,6 +19,7 @@ import type { AdminAuditLog, AdminAuditAction } from "@/types/audit";
 
 interface RestaurantActivityFeedProps {
   activity: AdminAuditLog[];
+  restaurantId?: string;
 }
 
 function getActionMeta(action: AdminAuditAction): {
@@ -89,7 +91,10 @@ function formatRelativeTime(date: Date | string): string {
   }
 }
 
-export function RestaurantActivityFeed({ activity }: RestaurantActivityFeedProps) {
+export function RestaurantActivityFeed({
+  activity,
+  restaurantId,
+}: RestaurantActivityFeedProps) {
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
 
   const toggleExpand = (id: string) => {
@@ -238,18 +243,19 @@ export function RestaurantActivityFeed({ activity }: RestaurantActivityFeedProps
         </div>
       )}
 
-      {/* Phase 6 Hook Contract */}
-      <div className="pt-2 text-center">
-        <button
-          type="button"
-          disabled
-          className="inline-flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-500 transition font-medium cursor-not-allowed group"
-          title="Global audit exploration will be available in Phase 6"
-        >
-          <span>View full audit history in Phase 6</span>
-          <ArrowRight className="h-3.5 w-3.5 text-zinc-400" />
-        </button>
-      </div>
+      {/* Phase 6D Cross-Navigation to Global Audit Explorer */}
+      {restaurantId && (
+        <div className="pt-2 text-center">
+          <Link
+            href={`/admin/audit?restaurant=${encodeURIComponent(restaurantId)}`}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium text-zinc-700 hover:text-zinc-950 bg-zinc-100 hover:bg-zinc-200/80 border border-zinc-200 transition group cursor-pointer"
+            title="Explore full audit history for this restaurant"
+          >
+            <span>View Audit Activity</span>
+            <ArrowRight className="h-3.5 w-3.5 text-zinc-400 group-hover:text-zinc-700 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

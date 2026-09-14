@@ -192,7 +192,10 @@ export function RestaurantDetailDrawer({
               />
 
               {/* 4. Recent Activity from Audit Trail */}
-              <RestaurantActivityFeed activity={recentActivity} />
+              <RestaurantActivityFeed
+                activity={recentActivity}
+                restaurantId={detail.id}
+              />
             </div>
           )}
         </div>

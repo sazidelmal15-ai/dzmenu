@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Store, RotateCcw, ChevronRight } from "lucide-react";
 import type { AdminRestaurantRow } from "@/lib/db/queries";
 import { StatusBadge } from "./StatusBadge";
@@ -72,8 +72,18 @@ export function RestaurantTable({
   isFiltered = false,
 }: RestaurantTableProps) {
   const router = useRouter();
-  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const selectedParam = searchParams.get("selected");
+
+  const [selectedRestaurantId, setSelectedRestaurantId] = useState<string | null>(selectedParam || null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(Boolean(selectedParam));
+
+  useEffect(() => {
+    if (selectedParam) {
+      setSelectedRestaurantId(selectedParam);
+      setIsDrawerOpen(true);
+    }
+  }, [selectedParam]);
 
   const handleRowClick = (restaurant: AdminRestaurantRow) => {
     setSelectedRestaurantId(restaurant.id);

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import {
   X,
   Copy,
@@ -13,6 +14,7 @@ import {
   FileText,
   Shield,
   Info,
+  ExternalLink,
 } from "lucide-react";
 import { getAuditDetailAction, type AuditDetailData } from "@/lib/admin/actions";
 import {
@@ -294,6 +296,18 @@ export function AuditDetailDrawer({
                     {log.targetRestaurantSlug && (
                       <div className="text-[11px] text-zinc-500 font-mono">
                         /m/{log.targetRestaurantSlug}
+                      </div>
+                    )}
+                    {log.targetRestaurantId && (
+                      <div className="pt-1">
+                        <Link
+                          href={`/admin/restaurants?selected=${encodeURIComponent(log.targetRestaurantId)}&q=${encodeURIComponent(log.targetRestaurantName || log.targetRestaurantSlug || "")}`}
+                          className="inline-flex items-center gap-1 text-[11px] font-semibold text-zinc-700 hover:text-zinc-950 underline decoration-zinc-300 hover:decoration-zinc-700 underline-offset-2 transition group cursor-pointer"
+                          title="Open restaurant in directory"
+                        >
+                          <span>Open Restaurant</span>
+                          <ExternalLink className="h-3 w-3 text-zinc-400 group-hover:text-zinc-700 transition" />
+                        </Link>
                       </div>
                     )}
                   </div>
