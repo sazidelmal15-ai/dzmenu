@@ -30,6 +30,7 @@ import type { ThemeRenderContext, MenuItemView, MenuCategoryView } from "@/types
 import { buildTrackedMenuUrl } from "@/lib/analytics/urls";
 import { searchMenuItems } from "@/lib/search/fuzzy-search";
 import { getFramingTransformStyle, getSlotFraming } from "@/lib/utils";
+import { FoodPatternPlaceholder } from "@/components/ui/FoodPatternPlaceholder";
 
 function formatSocialUrl(
   raw: string | null | undefined,
@@ -782,9 +783,7 @@ export function GourmetMainTemplate({
                                   style={getFramingTransformStyle(dish.framing)}
                                 />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center text-3xl">
-                                  🍽️
-                                </div>
+                                <FoodPatternPlaceholder altText={dish.name} />
                               )}
                               {(dish.badge || dish.isFeatured) && (
                                 <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-[var(--dz-theme-surface)] border border-[var(--dz-theme-border)] text-[10px] font-serif text-[var(--dz-theme-accent)] shadow-xs">
@@ -872,9 +871,7 @@ export function GourmetMainTemplate({
                                 style={getFramingTransformStyle(dish.framing)}
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center text-2xl">
-                                👨‍🍳
-                              </div>
+                              <FoodPatternPlaceholder altText={dish.name} iconClassName="w-6 h-6" />
                             )}
                           </div>
                           <div className="p-2.5">
@@ -1771,9 +1768,7 @@ function DishHorizontalCard({
             style={getFramingTransformStyle(dish.framing)}
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-3xl">
-            🍽️
-          </div>
+          <FoodPatternPlaceholder altText={dish.name} iconClassName="w-5 h-5" />
         )}
       </div>
 

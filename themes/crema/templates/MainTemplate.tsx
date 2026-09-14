@@ -27,6 +27,7 @@ import {
   getCategorySearchCounts,
 } from "@/lib/search/fuzzy-search";
 import { getFramingTransformStyle, getSlotFraming } from "@/lib/utils";
+import { FoodPatternPlaceholder } from "@/components/ui/FoodPatternPlaceholder";
 
 interface CremaBadgeConfig {
   label: string;
@@ -764,9 +765,7 @@ export function CremaMainTemplate({
                                   style={getFramingTransformStyle(item.framing)}
                                 />
                               ) : (
-                                <div className="w-full h-full flex flex-col items-center justify-center text-3xl">
-                                  <span>🍰</span>
-                                </div>
+                                <FoodPatternPlaceholder altText={item.name} />
                               )}
                             </div>
 

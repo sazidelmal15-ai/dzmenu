@@ -31,6 +31,7 @@ import type { ThemeRenderContext, MenuItemView, MenuCategoryView } from "@/types
 import { buildTrackedMenuUrl } from "@/lib/analytics/urls";
 import { searchMenuItems } from "@/lib/search/fuzzy-search";
 import { getFramingTransformStyle, getSlotFraming } from "@/lib/utils";
+import { FoodPatternPlaceholder } from "@/components/ui/FoodPatternPlaceholder";
 
 function formatSocialUrl(
   raw: string | null | undefined,
@@ -576,9 +577,7 @@ export function CravingMainTemplate({
                               style={getFramingTransformStyle(dish.framing)}
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-3xl">
-                              🍽️
-                            </div>
+                            <FoodPatternPlaceholder altText={dish.name} />
                           )}
 
                           {/* Promotional Pill Badge */}
@@ -965,9 +964,7 @@ export function CravingMainTemplate({
                               style={getFramingTransformStyle(dish.framing)}
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-3xl">
-                              🍽️
-                            </div>
+                            <FoodPatternPlaceholder altText={dish.name} />
                           )}
 
                           {/* Promotional Pill Badge */}
@@ -1066,9 +1063,7 @@ export function CravingMainTemplate({
                             style={getFramingTransformStyle(dish.framing)}
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-3xl">
-                            🍽️
-                          </div>
+                          <FoodPatternPlaceholder altText={dish.name} iconClassName="w-5 h-5" />
                         )}
                         {dish.badge && (
                           <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider bg-[var(--dz-theme-primary)] text-white shadow-sm">
@@ -1225,9 +1220,7 @@ export function CravingMainTemplate({
                           style={getFramingTransformStyle(dish.framing)}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-2xl">
-                          🍽️
-                        </div>
+                        <FoodPatternPlaceholder altText={dish.name} iconClassName="w-4 h-4" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">

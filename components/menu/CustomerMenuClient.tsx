@@ -23,6 +23,7 @@ import type { Restaurant } from "@/types/restaurant";
 import type { Category, MenuItem } from "@/types/menu";
 import type { ResolvedTheme } from "@/lib/themes/resolver";
 import { searchMenuItems } from "@/lib/search/fuzzy-search";
+import { FoodPatternPlaceholder } from "@/components/ui/FoodPatternPlaceholder";
 
 interface CustomerMenuProps {
   restaurant: Restaurant;
@@ -628,8 +629,8 @@ export default function CustomerMenuClient({
                         />
                       </div>
                     ) : (
-                      <div className="h-24 w-full rounded-xl bg-gray-50 flex items-center justify-center text-3xl mb-2">
-                        🍔
+                      <div className="h-28 w-full rounded-xl overflow-hidden mb-2">
+                        <FoodPatternPlaceholder altText={item.name} iconClassName="w-6 h-6" />
                       </div>
                     )}
                     <h3 className="text-xs sm:text-sm font-bold text-[var(--dz-text)] line-clamp-1">

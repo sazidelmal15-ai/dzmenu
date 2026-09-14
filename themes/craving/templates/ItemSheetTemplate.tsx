@@ -12,6 +12,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import type { ThemeRenderContext, MenuItemView } from "@/types/theme-contract";
+import { FoodPatternPlaceholder } from "@/components/ui/FoodPatternPlaceholder";
 
 export function CravingItemSheetTemplate({
   menu,
@@ -284,9 +285,7 @@ export function CravingItemSheetTemplate({
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-xl">
-                        🍽️
-                      </div>
+                      <FoodPatternPlaceholder altText={dish.name} iconClassName="w-4 h-4" />
                     )}
                   </div>
                   <h4 className="text-[11px] font-black text-[var(--dz-theme-text)] truncate leading-tight">
