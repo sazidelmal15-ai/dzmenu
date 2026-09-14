@@ -1,6 +1,6 @@
 import "server-only";
-import { getDb } from "../client";
-import type { Restaurant, RestaurantProfileUpdatePayload } from "@/types/restaurant";
+import { getDb, type DatabaseAdapter } from "../client";
+import type { Restaurant, RestaurantProfileUpdatePayload, RestaurantStatus } from "@/types/restaurant";
 import type { SubscriptionPlan, SubscriptionStatus } from "@/types/subscription";
 
 export interface AdminRestaurantOverview {
@@ -14,6 +14,14 @@ export interface AdminRestaurantOverview {
   subscriptionPlan: SubscriptionPlan | null;
   subscriptionExpiresAt: Date | null;
   createdAt: Date;
+}
+
+export interface PlatformKpiStats {
+  totalRestaurants: number;
+  activeCount: number;
+  trialCount: number;
+  expiredCount: number;
+  suspendedCount: number;
 }
 
 /**
@@ -74,14 +82,27 @@ export const restaurantQueries = {
   },
 
   /**
-   * Fetches an active restaurant by unique ID.
+   * Resolves a restaurant by its UUID primary key.
    */
-  async findById(id: string): Promise<Restaurant | null> {
-    const db = getDb();
+  async findById(id: string, dbOrTx?: DatabaseAdapter): Promise<Restaurant | null> {
+    const db = dbOrTx || getDb();
     return db.queryOne<Restaurant>(
       `SELECT ${RESTAURANT_SELECT_COLUMNS}
        FROM restaurants
        WHERE id = $1 AND deleted_at IS NULL`,
+      [id]
+    );
+  },
+
+  /**
+   * Locks restaurant row with FOR UPDATE inside a database transaction to serialize concurrent updates.
+   */
+  async lockForUpdate(id: string, dbOrTx: DatabaseAdapter): Promise<Restaurant | null> {
+    return dbOrTx.queryOne<Restaurant>(
+      `SELECT ${RESTAURANT_SELECT_COLUMNS}
+       FROM restaurants
+       WHERE id = $1 AND deleted_at IS NULL
+       FOR UPDATE`,
       [id]
     );
   },
@@ -248,10 +269,32 @@ export const restaurantQueries = {
   },
 
   /**
+   * Updates status for a restaurant tenant (e.g., ACTIVE, SUSPENDED).
+   */
+  async updateStatus(
+    id: string,
+    status: RestaurantStatus,
+    dbOrTx?: DatabaseAdapter
+  ): Promise<Restaurant> {
+    const db = dbOrTx || getDb();
+    const row = await db.queryOne<Restaurant>(
+      `UPDATE restaurants
+       SET status = $2, updated_at = NOW()
+       WHERE id = $1 AND deleted_at IS NULL
+       RETURNING ${RESTAURANT_SELECT_COLUMNS}`,
+      [id, status]
+    );
+    if (!row) {
+      throw new Error(`Failed to update status for restaurant ${id}`);
+    }
+    return row;
+  },
+
+  /**
    * Retrieves all registered restaurants for Platform Administration overview.
    */
-  async getAllForAdmin(): Promise<AdminRestaurantOverview[]> {
-    const db = getDb();
+  async getAllForAdmin(dbOrTx?: DatabaseAdapter): Promise<AdminRestaurantOverview[]> {
+    const db = dbOrTx || getDb();
     return db.query<AdminRestaurantOverview>(
       `SELECT r.id, r.name, r.slug, r.status,
               u.email AS "ownerEmail", u.full_name AS "ownerName",
@@ -265,5 +308,37 @@ export const restaurantQueries = {
        WHERE r.deleted_at IS NULL
        ORDER BY r.created_at DESC`
     );
+  },
+
+  /**
+   * Retrieves live aggregated KPI metrics for Mission Control.
+   */
+  async getPlatformKpiStats(dbOrTx?: DatabaseAdapter): Promise<PlatformKpiStats> {
+    const db = dbOrTx || getDb();
+    const row = await db.queryOne<{
+      totalRestaurants: string | number;
+      activeCount: string | number;
+      trialCount: string | number;
+      expiredCount: string | number;
+      suspendedCount: string | number;
+    }>(
+      `SELECT 
+         COUNT(r.id)::int AS "totalRestaurants",
+         COUNT(CASE WHEN (s.status = 'ACTIVE') AND s.current_period_end > NOW() AND r.status != 'SUSPENDED' THEN 1 END)::int AS "activeCount",
+         COUNT(CASE WHEN (s.status = 'TRIALING' OR s.status = 'TRIAL') AND s.current_period_end > NOW() AND r.status != 'SUSPENDED' THEN 1 END)::int AS "trialCount",
+         COUNT(CASE WHEN (s.current_period_end <= NOW() OR s.status = 'EXPIRED' OR s.status = 'INACTIVE' OR s.status IS NULL) AND r.status != 'SUSPENDED' THEN 1 END)::int AS "expiredCount",
+         COUNT(CASE WHEN r.status = 'SUSPENDED' OR s.status = 'SUSPENDED' THEN 1 END)::int AS "suspendedCount"
+       FROM restaurants r
+       LEFT JOIN subscriptions s ON s.restaurant_id = r.id
+       WHERE r.deleted_at IS NULL`
+    );
+
+    return {
+      totalRestaurants: row ? Number(row.totalRestaurants) : 0,
+      activeCount: row ? Number(row.activeCount) : 0,
+      trialCount: row ? Number(row.trialCount) : 0,
+      expiredCount: row ? Number(row.expiredCount) : 0,
+      suspendedCount: row ? Number(row.suspendedCount) : 0,
+    };
   },
 };

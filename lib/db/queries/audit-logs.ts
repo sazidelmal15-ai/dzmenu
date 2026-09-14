@@ -1,5 +1,5 @@
 import "server-only";
-import { getDb } from "../client";
+import { getDb, type DatabaseAdapter } from "../client";
 import type { AdminAuditLog, CreateAdminAuditLogPayload } from "@/types/audit";
 
 const AUDIT_LOG_SELECT_COLUMNS = `
@@ -23,8 +23,11 @@ export const auditLogQueries = {
   /**
    * Records an administrative action in the structured audit log.
    */
-  async record(payload: CreateAdminAuditLogPayload): Promise<AdminAuditLog> {
-    const db = getDb();
+  async record(
+    payload: CreateAdminAuditLogPayload,
+    dbOrTx?: DatabaseAdapter
+  ): Promise<AdminAuditLog> {
+    const db = dbOrTx || getDb();
     const row = await db.queryOne<AdminAuditLog>(
       `INSERT INTO admin_audit_logs (
          actor_id, actor_email, action,
@@ -51,6 +54,27 @@ export const auditLogQueries = {
     }
 
     return row;
+  },
+
+  /**
+   * Finds a recent audit log by restaurant and idempotency key (DB-persistent idempotency).
+   */
+  async findRecentByIdempotencyKey(
+    restaurantId: string,
+    idempotencyKey: string,
+    dbOrTx?: DatabaseAdapter
+  ): Promise<AdminAuditLog | null> {
+    const db = dbOrTx || getDb();
+    return db.queryOne<AdminAuditLog>(
+      `SELECT ${AUDIT_LOG_SELECT_COLUMNS}
+       FROM admin_audit_logs
+       WHERE target_restaurant_id = $1
+         AND metadata->>'idempotencyKey' = $2
+         AND created_at > NOW() - INTERVAL '24 hours'
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [restaurantId, idempotencyKey]
+    );
   },
 
   /**

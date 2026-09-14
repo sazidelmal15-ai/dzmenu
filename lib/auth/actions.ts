@@ -209,14 +209,13 @@ export async function logoutAction(): Promise<void> {
 }
 
 /**
- * Admin action to activate or extend a restaurant's annual subscription.
+ * Admin action to activate or extend a restaurant's annual subscription (backward-compatible).
  */
 export async function activateSubscriptionAction(formData: FormData): Promise<void> {
-  await requireRole(PLATFORM_ADMIN_ROLES);
   const restaurantId = formData.get("restaurantId") as string;
-
   if (restaurantId) {
-    await subscriptionQueries.activateOrExtend(restaurantId, 365);
+    const { adminLifecycleService } = await import("@/lib/admin/lifecycle-service");
+    await adminLifecycleService.extendAnnual(restaurantId, { durationDays: 365 });
     revalidatePath(ROUTES.ADMIN);
   }
 }

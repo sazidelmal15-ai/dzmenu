@@ -2,6 +2,8 @@
  * Supported administrative lifecycle actions for Mission Control.
  */
 export type AdminAuditAction =
+  | "ACTIVATE_PLAN"
+  | "EXTEND_SUBSCRIPTION"
   | "ACTIVATE_ANNUAL"
   | "EXTEND_ANNUAL"
   | "GRANT_TRIAL"
@@ -14,12 +16,15 @@ export type AdminAuditAction =
  * Snapshot of subscription / tenant state before and after an administrative action.
  */
 export interface AdminAuditStateSnapshot {
-  status?: string;
-  subscriptionStatus?: string;
-  subscriptionPlan?: string;
-  subscriptionExpiresAt?: string | null;
-  periodStart?: string | null;
-  periodEnd?: string | null;
+  status?: string | null;
+  restaurantStatus?: string | null;
+  subscriptionStatus?: string | null;
+  subscriptionPlan?: string | null;
+  subscriptionExpiresAt?: string | Date | null;
+  currentPeriodStart?: string | Date | null;
+  currentPeriodEnd?: string | Date | null;
+  periodStart?: string | Date | null;
+  periodEnd?: string | Date | null;
   [key: string]: unknown;
 }
 
