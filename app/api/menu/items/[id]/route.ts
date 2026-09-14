@@ -85,6 +85,7 @@ export async function PATCH(
       badge: data.badge,
       tags: data.tags,
       ingredients: data.ingredients,
+      availability: data.availability,
       isVisible: data.isVisible,
       isAvailable: data.isAvailable,
       isFeatured: data.isFeatured,

@@ -291,6 +291,14 @@ export const MENU_ITEM_TAGS = [
   "nuts",
 ] as const;
 
+export const MENU_ITEM_AVAILABILITIES = [
+  "AVAILABLE",
+  "SOLD_OUT",
+  "HIDDEN",
+] as const;
+
+export const menuItemAvailabilitySchema = z.enum(MENU_ITEM_AVAILABILITIES);
+
 export const ingredientsSchema = z
   .array(
     z
@@ -330,8 +338,9 @@ export const menuItemCreateSchema = z
       .transform((val) => (val === "" ? null : val)),
     tags: z.array(z.enum(MENU_ITEM_TAGS)).optional().default([]),
     ingredients: ingredientsSchema,
-    isVisible: z.boolean().optional().default(true),
-    isAvailable: z.boolean().optional().default(true),
+    availability: menuItemAvailabilitySchema.optional().default("AVAILABLE"),
+    isVisible: z.boolean().optional(),
+    isAvailable: z.boolean().optional(),
     isFeatured: z.boolean().optional().default(false),
     variants: z.array(z.any()).optional().default([]),
     sizes: z.array(z.any()).optional().default([]),
@@ -394,6 +403,7 @@ export const menuItemUpdateSchema = z
       .transform((val) => (val === "" ? null : val)),
     tags: z.array(z.enum(MENU_ITEM_TAGS)).optional(),
     ingredients: ingredientsSchema.optional(),
+    availability: menuItemAvailabilitySchema.optional(),
     isVisible: z.boolean().optional(),
     isAvailable: z.boolean().optional(),
     isFeatured: z.boolean().optional(),

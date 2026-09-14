@@ -785,11 +785,15 @@ export function GourmetMainTemplate({
                               ) : (
                                 <FoodPatternPlaceholder altText={dish.name} />
                               )}
-                              {(dish.badge || dish.isFeatured) && (
+                              {dish.isSoldOut ? (
+                                <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-stone-900/90 text-stone-100 text-[9px] font-bold uppercase tracking-wider shadow-xs">
+                                  Sold Out
+                                </span>
+                              ) : (dish.badge || dish.isFeatured) ? (
                                 <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-[var(--dz-theme-surface)] border border-[var(--dz-theme-border)] text-[10px] font-serif text-[var(--dz-theme-accent)] shadow-xs">
                                   {formatBadgeLabel(dish.badge) || "Chef's pick"}
                                 </span>
-                              )}
+                              ) : null}
                             </div>
 
                             {/* Info */}
@@ -1817,6 +1821,11 @@ function DishHorizontalCard({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {dish.isSoldOut && (
+              <span className="px-2 py-0.5 rounded-full bg-stone-900/85 text-stone-100 text-[9px] font-bold uppercase tracking-wider">
+                Sold Out
+              </span>
+            )}
             {dish.hasActiveDiscount && dish.discountPercentage && (
               <span className="px-1.5 py-0.5 rounded-md bg-red-600 text-white text-[9px] font-bold">
                 -{dish.discountPercentage}%

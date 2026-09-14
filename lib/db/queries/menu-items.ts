@@ -1,6 +1,14 @@
 import "server-only";
 import { getDb } from "../client";
-import type { MenuItem, MenuItemVariant, MenuItemSize, MenuItemExtra, MenuItemBadge, MenuItemTag } from "@/types/menu";
+import type {
+  MenuItem,
+  MenuItemAvailability,
+  MenuItemVariant,
+  MenuItemSize,
+  MenuItemExtra,
+  MenuItemBadge,
+  MenuItemTag,
+} from "@/types/menu";
 
 interface MenuItemRow {
   id: string;
@@ -17,6 +25,7 @@ interface MenuItemRow {
   badge: MenuItemBadge | null;
   tags: MenuItemTag[] | null;
   ingredients: string[] | null;
+  availability?: MenuItemAvailability;
   isVisible: boolean;
   isAvailable: boolean;
   isFeatured: boolean;
@@ -29,9 +38,16 @@ interface MenuItemRow {
 }
 
 /**
- * Normalizes DB row values into typed domain MenuItem entity.
+ * Normalizes DB row values into typed domain MenuItem entity with authoritative availability.
  */
 function mapMenuItemRow(r: MenuItemRow): MenuItem {
+  let availability: MenuItemAvailability = "AVAILABLE";
+  if (r.availability === "AVAILABLE" || r.availability === "SOLD_OUT" || r.availability === "HIDDEN") {
+    availability = r.availability;
+  } else if (r.isVisible === false || r.isAvailable === false) {
+    availability = "HIDDEN";
+  }
+
   return {
     ...r,
     price: Number(r.price),
@@ -41,8 +57,9 @@ function mapMenuItemRow(r: MenuItemRow): MenuItem {
     badge: r.badge || null,
     tags: Array.isArray(r.tags) ? r.tags : [],
     ingredients: Array.isArray(r.ingredients) ? r.ingredients : [],
-    isVisible: r.isVisible !== false,
-    isAvailable: r.isAvailable !== false,
+    availability,
+    isVisible: availability !== "HIDDEN",
+    isAvailable: availability === "AVAILABLE",
     isFeatured: Boolean(r.isFeatured),
     variants: Array.isArray(r.variants) ? r.variants : [],
     sizes: Array.isArray(r.sizes) ? r.sizes : [],
@@ -51,7 +68,7 @@ function mapMenuItemRow(r: MenuItemRow): MenuItem {
 }
 
 /**
- * Menu Items Query Helpers (Soft Delete Enforced)
+ * Menu Items Query Helpers (Authoritative 3-State Availability & Soft Delete Enforced)
  */
 export const menuItemQueries = {
   /**
@@ -75,6 +92,7 @@ export const menuItemQueries = {
               mi.discount_ends_at AS "discountEndsAt",
               mi.image_url AS "imageUrl", mi.badge, mi.tags,
               mi.ingredients,
+              COALESCE(mi.availability, 'AVAILABLE') AS "availability",
               mi.is_visible AS "isVisible",
               mi.is_available AS "isAvailable", mi.is_featured AS "isFeatured",
               mi.variants, mi.sizes, mi.extras,
@@ -102,6 +120,7 @@ export const menuItemQueries = {
               mi.discount_ends_at AS "discountEndsAt",
               mi.image_url AS "imageUrl", mi.badge, mi.tags,
               mi.ingredients,
+              COALESCE(mi.availability, 'AVAILABLE') AS "availability",
               mi.is_visible AS "isVisible",
               mi.is_available AS "isAvailable", mi.is_featured AS "isFeatured",
               mi.variants, mi.sizes, mi.extras,
@@ -134,6 +153,7 @@ export const menuItemQueries = {
       badge?: MenuItemBadge | null;
       tags?: MenuItemTag[];
       ingredients?: string[];
+      availability?: MenuItemAvailability;
       isVisible?: boolean;
       isAvailable?: boolean;
       isFeatured?: boolean;
@@ -143,17 +163,29 @@ export const menuItemQueries = {
     }
   ): Promise<MenuItem> {
     const db = getDb();
+
+    // Resolve authoritative availability state
+    let targetAvailability: MenuItemAvailability = "AVAILABLE";
+    if (data.availability) {
+      targetAvailability = data.availability;
+    } else if (data.isVisible === false || data.isAvailable === false) {
+      targetAvailability = "HIDDEN";
+    }
+
+    const legacyIsVisible = targetAvailability !== "HIDDEN";
+    const legacyIsAvailable = targetAvailability === "AVAILABLE";
+
     const row = await db.queryOne<MenuItemRow>(
       `INSERT INTO menu_items (
          restaurant_id, category_id, name, description, price, original_price, discount_starts_at, discount_ends_at,
-         image_url, badge, tags, ingredients, is_visible, is_available, is_featured, variants, sizes, extras, created_at, updated_at
+         image_url, badge, tags, ingredients, availability, is_visible, is_available, is_featured, variants, sizes, extras, created_at, updated_at
        )
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13, $14, $15, $16::jsonb, $17::jsonb, $18::jsonb, NOW(), NOW())
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13, $14, $15, $16, $17::jsonb, $18::jsonb, $19::jsonb, NOW(), NOW())
        RETURNING id, restaurant_id AS "restaurantId", category_id AS "categoryId",
                  name, description, price, original_price AS "originalPrice",
                  discount_starts_at AS "discountStartsAt", discount_ends_at AS "discountEndsAt",
                  image_url AS "imageUrl", badge, tags, ingredients,
-                 is_visible AS "isVisible", is_available AS "isAvailable", is_featured AS "isFeatured",
+                 availability, is_visible AS "isVisible", is_available AS "isAvailable", is_featured AS "isFeatured",
                  variants, sizes, extras,
                  sort_order AS "sortOrder", created_at AS "createdAt", updated_at AS "updatedAt"`,
       [
@@ -169,8 +201,9 @@ export const menuItemQueries = {
         data.badge || null,
         JSON.stringify(data.tags || []),
         JSON.stringify(data.ingredients || []),
-        data.isVisible !== false,
-        data.isAvailable !== false,
+        targetAvailability,
+        legacyIsVisible,
+        legacyIsAvailable,
         Boolean(data.isFeatured),
         JSON.stringify(data.variants || []),
         JSON.stringify(data.sizes || []),
@@ -203,6 +236,7 @@ export const menuItemQueries = {
       badge?: MenuItemBadge | null;
       tags?: MenuItemTag[];
       ingredients?: string[];
+      availability?: MenuItemAvailability;
       isVisible?: boolean;
       isAvailable?: boolean;
       isFeatured?: boolean;
@@ -219,6 +253,20 @@ export const menuItemQueries = {
     const hasDiscountStartsAt = data.discountStartsAt !== undefined;
     const hasDiscountEndsAt = data.discountEndsAt !== undefined;
 
+    // Resolve availability mutation
+    const hasExplicitAvailability = data.availability !== undefined;
+    let targetAvailability: MenuItemAvailability | null = data.availability || null;
+
+    if (!targetAvailability) {
+      if (data.isVisible === false || data.isAvailable === false) {
+        targetAvailability = "HIDDEN";
+      } else if (data.isVisible === true && data.isAvailable === true) {
+        targetAvailability = "AVAILABLE";
+      }
+    }
+
+    const hasAvailabilityChange = hasExplicitAvailability || targetAvailability !== null;
+
     const row = await db.queryOne<MenuItemRow>(
       `UPDATE menu_items
        SET category_id = COALESCE($3, category_id),
@@ -232,8 +280,9 @@ export const menuItemQueries = {
            badge = CASE WHEN $14::boolean THEN $15 ELSE badge END,
            tags = CASE WHEN $16::boolean THEN $17::jsonb ELSE tags END,
            ingredients = CASE WHEN $18::boolean THEN $19::jsonb ELSE ingredients END,
-           is_visible = COALESCE($20, is_visible),
-           is_available = COALESCE($21, is_available),
+           availability = CASE WHEN $20::boolean THEN $21 ELSE availability END,
+           is_visible = CASE WHEN $20::boolean THEN ($21 != 'HIDDEN') ELSE is_visible END,
+           is_available = CASE WHEN $20::boolean THEN ($21 = 'AVAILABLE') ELSE is_available END,
            is_featured = COALESCE($22, is_featured),
            variants = COALESCE($23::jsonb, variants),
            sizes = COALESCE($24::jsonb, sizes),
@@ -244,7 +293,7 @@ export const menuItemQueries = {
                  name, description, price, original_price AS "originalPrice",
                  discount_starts_at AS "discountStartsAt", discount_ends_at AS "discountEndsAt",
                  image_url AS "imageUrl", badge, tags, ingredients,
-                 is_visible AS "isVisible", is_available AS "isAvailable", is_featured AS "isFeatured",
+                 availability, is_visible AS "isVisible", is_available AS "isAvailable", is_featured AS "isFeatured",
                  variants, sizes, extras,
                  sort_order AS "sortOrder", created_at AS "createdAt", updated_at AS "updatedAt"`,
       [
@@ -267,8 +316,8 @@ export const menuItemQueries = {
         data.tags ? JSON.stringify(data.tags) : null,
         hasIngredients,
         data.ingredients ? JSON.stringify(data.ingredients) : null,
-        data.isVisible,
-        data.isAvailable,
+        hasAvailabilityChange,
+        targetAvailability,
         data.isFeatured,
         data.variants ? JSON.stringify(data.variants) : null,
         data.sizes ? JSON.stringify(data.sizes) : null,
@@ -282,17 +331,34 @@ export const menuItemQueries = {
   },
 
   /**
-   * Toggles item availability quickly (Available / Hidden).
+   * Sets menu item availability state authoritatively (AVAILABLE / SOLD_OUT / HIDDEN).
    */
-  async toggleAvailability(itemId: string, restaurantId: string, isAvailable: boolean): Promise<boolean> {
+  async setAvailability(
+    itemId: string,
+    restaurantId: string,
+    availability: MenuItemAvailability
+  ): Promise<boolean> {
     const db = getDb();
-    await db.query(
+    const isVis = availability !== "HIDDEN";
+    const isAvail = availability === "AVAILABLE";
+
+    const result = await db.query(
       `UPDATE menu_items
-       SET is_available = $3, updated_at = NOW()
+       SET availability = $3,
+           is_visible = $4,
+           is_available = $5,
+           updated_at = NOW()
        WHERE id = $1 AND restaurant_id = $2 AND deleted_at IS NULL`,
-      [itemId, restaurantId, isAvailable]
+      [itemId, restaurantId, availability, isVis, isAvail]
     );
     return true;
+  },
+
+  /**
+   * Toggles item availability quickly (Backward compatible helper).
+   */
+  async toggleAvailability(itemId: string, restaurantId: string, isAvailable: boolean): Promise<boolean> {
+    return this.setAvailability(itemId, restaurantId, isAvailable ? "AVAILABLE" : "HIDDEN");
   },
 
   /**

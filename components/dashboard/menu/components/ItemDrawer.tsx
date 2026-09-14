@@ -26,6 +26,7 @@ import { apiFetch } from '@/lib/api';
 import {
   type MenuItemBadge,
   type MenuItemTag,
+  type MenuItemAvailability,
   MENU_ITEM_BADGES,
   MENU_ITEM_TAGS,
   BADGE_DEFINITIONS,
@@ -160,8 +161,8 @@ export default function ItemDrawer({
 
   const [extras, setExtras] = useState<{ id?: string; name: string; price: string }[]>([]);
 
-  // Visibility Settings
-  const [isVisible, setIsVisible] = useState(true);
+  // Availability Settings (Single Source of Truth)
+  const [availability, setAvailability] = useState<MenuItemAvailability>('AVAILABLE');
 
   const getImageUrl = (url: string) => {
     if (!url) return '';
@@ -187,13 +188,18 @@ export default function ItemDrawer({
         setName(initialData.name || '');
         setCategoryId(initialData.categoryId || (categories[0]?.id ?? ''));
         setDescription(initialData.description || '');
-        setIsVisible(
-          initialData.isVisible !== undefined
-            ? Boolean(initialData.isVisible)
-            : initialData.isAvailable !== undefined
-            ? Boolean(initialData.isAvailable)
-            : true
-        );
+        
+        let initialAvailability: MenuItemAvailability = 'AVAILABLE';
+        if (
+          initialData.availability === 'AVAILABLE' ||
+          initialData.availability === 'SOLD_OUT' ||
+          initialData.availability === 'HIDDEN'
+        ) {
+          initialAvailability = initialData.availability;
+        } else if (initialData.isVisible === false || initialData.isAvailable === false) {
+          initialAvailability = 'HIDDEN';
+        }
+        setAvailability(initialAvailability);
         setImageOptimizationInfo(null);
 
         // Price & Promotion Mapping:
@@ -324,7 +330,7 @@ export default function ItemDrawer({
         setVariants([{ name: 'Vanilla', price: '', isDefault: true }]);
         setSizes([{ name: 'Small', price: '' }]);
         setExtras([]);
-        setIsVisible(true);
+        setAvailability('AVAILABLE');
       }
       setError('');
     }
@@ -674,8 +680,9 @@ export default function ItemDrawer({
         badge: badge || null,
         tags,
         ingredients: sanitizeIngredients(ingredients),
-        isVisible,
-        isAvailable: isVisible,
+        availability,
+        isVisible: availability !== 'HIDDEN',
+        isAvailable: availability === 'AVAILABLE',
         isFeatured: Boolean(badge !== null),
         variants: variantsEnabled ? variants.filter((v) => v.name.trim()) : [],
         sizes: sizesEnabled ? sizes.filter((s) => s.name.trim()) : [],
@@ -1728,43 +1735,55 @@ export default function ItemDrawer({
           <hr className="border-gray-100 my-8" />
 
           {/* ================================================================= */}
-          {/* SECTION: VISIBILITY SETTINGS                                      */}
+          {/* SECTION: AVAILABILITY & VISIBILITY SETTINGS                       */}
           {/* ================================================================= */}
           <div className="mb-8">
-            <h3 className="text-base font-bold text-gray-900 mb-1">Visibility Settings</h3>
+            <h3 className="text-base font-bold text-gray-900 mb-1">Item Availability</h3>
             <p className="text-xs text-gray-500 mb-4">
-              Control whether this item is visible to customers in your menu
+              Control how this item appears to customers scanning your digital menu
             </p>
 
-            <div
-              onClick={() => setIsVisible(!isVisible)}
-              className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center gap-3.5 ${
-                isVisible
-                  ? 'bg-[#FAF9F5] border-amber-200/80 shadow-xs'
-                  : 'bg-gray-50/70 border-gray-200'
-              }`}
-            >
-              <div
-                className={`w-11 h-6 rounded-full transition-colors relative flex items-center px-0.5 shrink-0 ${
-                  isVisible ? 'bg-amber-500' : 'bg-gray-300'
-                }`}
+            <div className="relative">
+              <select
+                value={availability}
+                onChange={(e) => setAvailability(e.target.value as MenuItemAvailability)}
+                className="w-full px-4 py-3.5 bg-white border border-[#E5E0D8] rounded-xl text-sm font-semibold text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all appearance-none cursor-pointer pr-10 shadow-xs"
               >
-                <div
-                  className={`w-5 h-5 rounded-full bg-white shadow-md transition-transform ${
-                    isVisible ? 'translate-x-5' : 'translate-x-0'
-                  }`}
-                />
+                <option value="AVAILABLE">Available — Visible &amp; orderable in public menu</option>
+                <option value="SOLD_OUT">Sold Out — Visible in public menu, marked Sold Out</option>
+                <option value="HIDDEN">Hidden — Completely hidden from public menu</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                <ChevronDown size={16} />
               </div>
-              <div>
-                <p className="text-sm font-bold text-gray-900">
-                  {isVisible ? 'Visible in Menu' : 'Hidden from Menu'}
-                </p>
-                <p className="text-xs text-gray-500 leading-snug mt-0.5">
-                  {isVisible
-                    ? 'This item is visible to customers scanning the QR menu'
-                    : 'This item is hidden from customers in the public menu'}
-                </p>
-              </div>
+            </div>
+
+            {/* State description banner */}
+            <div className="mt-3 p-3.5 rounded-xl border text-xs leading-relaxed flex items-start gap-2.5 transition-colors bg-[#FAF9F5] border-[#E5E0D8]">
+              {availability === 'AVAILABLE' && (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 mt-1 shrink-0" />
+                  <p className="text-gray-700">
+                    <strong className="font-bold text-gray-900">Available:</strong> Customers can view dish details and options normally on your live menu.
+                  </p>
+                </>
+              )}
+              {availability === 'SOLD_OUT' && (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-amber-500 mt-1 shrink-0" />
+                  <p className="text-gray-700">
+                    <strong className="font-bold text-gray-900">Sold Out:</strong> Customers can still see this dish on your menu, but it will be clearly labeled as &quot;Sold Out&quot;.
+                  </p>
+                </>
+              )}
+              {availability === 'HIDDEN' && (
+                <>
+                  <span className="w-2 h-2 rounded-full bg-gray-400 mt-1 shrink-0" />
+                  <p className="text-gray-700">
+                    <strong className="font-bold text-gray-900">Hidden:</strong> This dish is completely hidden and will not be displayed anywhere on the public menu.
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>

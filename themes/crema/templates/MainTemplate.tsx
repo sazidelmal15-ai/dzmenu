@@ -770,7 +770,13 @@ export function CremaMainTemplate({
                             </div>
 
                             {/* Luxury Boutique Eyebrow Tag (Above Title) */}
-                            {item.badge && CREMA_BADGE_CONFIG[item.badge] && (
+                            {item.isSoldOut ? (
+                              <div className="flex items-center gap-1 mb-1">
+                                <span className="px-2 py-0.5 rounded-md bg-stone-800 text-stone-100 text-[9px] font-bold uppercase tracking-wider">
+                                  Sold Out
+                                </span>
+                              </div>
+                            ) : item.badge && CREMA_BADGE_CONFIG[item.badge] ? (
                               <div
                                 className="flex items-center gap-1 text-[9.5px] sm:text-[10px] font-serif font-bold uppercase tracking-wider mb-1 line-clamp-1"
                                 style={{ color: "var(--dz-theme-accent)" }}
@@ -778,7 +784,7 @@ export function CremaMainTemplate({
                                 {CREMA_BADGE_CONFIG[item.badge].renderIcon("w-2.5 h-2.5 shrink-0")}
                                 <span className="truncate">{CREMA_BADGE_CONFIG[item.badge].label}</span>
                               </div>
-                            )}
+                            ) : null}
 
                             {/* Dish Title */}
                             <h5

@@ -7,6 +7,7 @@ import { requireActiveSubscription } from "@/lib/permissions/guards";
 import {
   type Category,
   type MenuItem,
+  type MenuItemAvailability,
   type MenuItemVariant,
   type MenuItemSize,
   type MenuItemExtra,
@@ -14,6 +15,7 @@ import {
   type MenuItemTag,
   MENU_ITEM_BADGES,
   MENU_ITEM_TAGS,
+  MENU_ITEM_AVAILABILITIES,
 } from "@/types/menu";
 
 const categorySchema = z.object({
@@ -41,8 +43,9 @@ const menuItemSchema = z.object({
     .transform((tags) => Array.from(new Set(tags)))
     .optional()
     .default([]),
-  isVisible: z.boolean().default(true),
-  isAvailable: z.boolean().default(true),
+  availability: z.enum(MENU_ITEM_AVAILABILITIES).optional().default("AVAILABLE"),
+  isVisible: z.boolean().optional(),
+  isAvailable: z.boolean().optional(),
   isFeatured: z.boolean().default(false),
   variants: z.array(z.object({
     name: z.string().trim(),
@@ -195,6 +198,7 @@ export async function saveMenuItemAction(data: {
   imageUrl?: string | null;
   badge?: MenuItemBadge | null;
   tags?: MenuItemTag[];
+  availability?: MenuItemAvailability;
   isVisible?: boolean;
   isAvailable?: boolean;
   isFeatured?: boolean;
@@ -231,7 +235,28 @@ export async function saveMenuItemAction(data: {
 }
 
 /**
- * Toggles a menu item's availability (Subscription Protected).
+ * Sets a menu item's availability state authoritatively (AVAILABLE / SOLD_OUT / HIDDEN) (Subscription Protected).
+ */
+export async function setMenuItemAvailabilityAction(
+  itemId: string,
+  restaurantId: string,
+  availability: MenuItemAvailability
+): Promise<MenuActionResult<MenuItemAvailability>> {
+  try {
+    await requireActiveSubscription(restaurantId);
+    await menuItemQueries.setAvailability(itemId, restaurantId, availability);
+    revalidatePath("/dashboard");
+    revalidatePath("/menu");
+    return { success: true, data: availability };
+  } catch (error) {
+    console.error("setMenuItemAvailabilityAction error:", error);
+    const msg = error instanceof Error ? error.message : "Failed to set item availability";
+    return { success: false, error: msg };
+  }
+}
+
+/**
+ * Toggles a menu item's availability (Subscription Protected - Backward Compatible).
  */
 export async function toggleMenuItemAvailabilityAction(
   itemId: string,
@@ -240,8 +265,9 @@ export async function toggleMenuItemAvailabilityAction(
 ): Promise<MenuActionResult<boolean>> {
   try {
     await requireActiveSubscription(restaurantId);
-    await menuItemQueries.toggleAvailability(itemId, restaurantId, isAvailable);
+    await menuItemQueries.setAvailability(itemId, restaurantId, isAvailable ? "AVAILABLE" : "HIDDEN");
     revalidatePath("/dashboard");
+    revalidatePath("/menu");
     return { success: true, data: isAvailable };
   } catch (error) {
     console.error("toggleMenuItemAvailabilityAction error:", error);

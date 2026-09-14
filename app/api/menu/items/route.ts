@@ -67,6 +67,7 @@ export async function POST(request: Request) {
       badge: data.badge || null,
       tags: data.tags,
       ingredients: data.ingredients,
+      availability: data.availability,
       isVisible: data.isVisible,
       isAvailable: data.isAvailable,
       isFeatured: data.isFeatured,

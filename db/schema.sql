@@ -253,10 +253,15 @@ CREATE TABLE IF NOT EXISTS menu_items (
     -- e.g. ["spicy", "vegetarian", "vegan", "gluten_free", "nuts"]
     ingredients   JSONB           NOT NULL DEFAULT '[]'::jsonb,
     -- e.g. ["Angus Beef 180g", "Aged Cheddar", "Truffle Mayo"] in presentation order
+    -- Availability State (Source of Truth)
+    availability  VARCHAR(20)     NOT NULL DEFAULT 'AVAILABLE'
+        CHECK (availability IN ('AVAILABLE', 'SOLD_OUT', 'HIDDEN')),
+    -- 'AVAILABLE' = visible & orderable | 'SOLD_OUT' = visible & out of stock | 'HIDDEN' = hidden from menu
+
     is_visible    BOOLEAN         NOT NULL DEFAULT TRUE,
-    -- TRUE = shown to customers | FALSE = hidden
+    -- Legacy mirror: TRUE = shown to customers | FALSE = hidden
     is_available  BOOLEAN         NOT NULL DEFAULT TRUE,
-    -- TRUE = can be ordered | FALSE = out of stock
+    -- Legacy mirror: TRUE = can be ordered | FALSE = out of stock
     is_featured   BOOLEAN         NOT NULL DEFAULT FALSE,
     -- TRUE = shown in featured/highlighted sections
 
@@ -294,6 +299,7 @@ ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS discount_ends_at    TIMESTAMPTZ 
 ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS ingredients         JSONB          NOT NULL DEFAULT '[]'::jsonb;
 ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS badge               VARCHAR(50)    NULL;
 ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS tags                JSONB          NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS availability        VARCHAR(20)    NOT NULL DEFAULT 'AVAILABLE';
 ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS is_visible          BOOLEAN        NOT NULL DEFAULT TRUE;
 ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS is_available        BOOLEAN        NOT NULL DEFAULT TRUE;
 ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS is_featured         BOOLEAN        NOT NULL DEFAULT FALSE;
@@ -309,6 +315,11 @@ ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 
 -- Core lookup: all active items for a restaurant
 CREATE INDEX IF NOT EXISTS idx_menu_items_restaurant_id
     ON menu_items(restaurant_id)
+    WHERE deleted_at IS NULL;
+
+-- Availability lookup: active items filtered by availability state
+CREATE INDEX IF NOT EXISTS idx_menu_items_availability
+    ON menu_items(restaurant_id, availability)
     WHERE deleted_at IS NULL;
 
 -- Category filter index

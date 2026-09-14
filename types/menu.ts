@@ -97,6 +97,15 @@ export const TAG_DEFINITIONS: Record<MenuItemTag, TagDefinition> = {
 };
 
 /**
+ * Menu Item Availability state (Single Source of Truth).
+ * - AVAILABLE: Shown publicly on menu and available for ordering/selection.
+ * - SOLD_OUT: Shown publicly on menu with a clear "Sold Out" status badge.
+ * - HIDDEN: Completely hidden and excluded from public menu rendering.
+ */
+export const MENU_ITEM_AVAILABILITIES = ["AVAILABLE", "SOLD_OUT", "HIDDEN"] as const;
+export type MenuItemAvailability = (typeof MENU_ITEM_AVAILABILITIES)[number];
+
+/**
  * Menu Item domain model.
  */
 export interface MenuItem {
@@ -114,6 +123,7 @@ export interface MenuItem {
   badge?: MenuItemBadge | null;
   tags?: MenuItemTag[];
   ingredients: string[];
+  availability: MenuItemAvailability;
   isVisible: boolean;
   isAvailable: boolean;
   isFeatured: boolean;
@@ -124,4 +134,5 @@ export interface MenuItem {
   createdAt: Date;
   updatedAt: Date;
 }
+
 

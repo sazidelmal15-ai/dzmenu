@@ -580,18 +580,24 @@ export function CravingMainTemplate({
                             <FoodPatternPlaceholder altText={dish.name} />
                           )}
 
-                          {/* Promotional Pill Badge */}
-                          <span
-                            className={`absolute top-2 left-2 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shadow-sm ${
-                              idx === 0
-                                ? "bg-[var(--dz-theme-primary)] text-white"
-                                : idx === 1
-                                ? "bg-[var(--dz-theme-accent)] text-black"
-                                : "bg-emerald-600 text-white"
-                            }`}
-                          >
-                            {formatBadgeLabel(dish.badge) || (idx === 0 ? "BEST SELLER" : idx === 1 ? "POPULAR" : "NEW")}
-                          </span>
+                          {/* Promotional / Sold Out Pill Badge */}
+                          {dish.isSoldOut ? (
+                            <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-stone-900 text-white shadow-sm">
+                              SOLD OUT
+                            </span>
+                          ) : (
+                            <span
+                              className={`absolute top-2 left-2 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider shadow-sm ${
+                                idx === 0
+                                  ? "bg-[var(--dz-theme-primary)] text-white"
+                                  : idx === 1
+                                  ? "bg-[var(--dz-theme-accent)] text-black"
+                                  : "bg-emerald-600 text-white"
+                              }`}
+                            >
+                              {formatBadgeLabel(dish.badge) || (idx === 0 ? "BEST SELLER" : idx === 1 ? "POPULAR" : "NEW")}
+                            </span>
+                          )}
 
                           <button
                             type="button"
@@ -967,12 +973,16 @@ export function CravingMainTemplate({
                             <FoodPatternPlaceholder altText={dish.name} />
                           )}
 
-                          {/* Promotional Pill Badge */}
-                          {dish.badge && (
+                          {/* Promotional / Sold Out Pill Badge */}
+                          {dish.isSoldOut ? (
+                            <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-stone-900 text-white shadow-sm">
+                              SOLD OUT
+                            </span>
+                          ) : dish.badge ? (
                             <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-[var(--dz-theme-primary)] text-white shadow-sm">
                               {formatBadgeLabel(dish.badge)}
                             </span>
-                          )}
+                          ) : null}
 
                           {/* Heart Favorite */}
                           <button

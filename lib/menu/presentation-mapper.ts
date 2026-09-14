@@ -302,6 +302,11 @@ export function mapItemToView(item: MenuItem, currency: string, locale: string):
 
   const ingredients = sanitizeIngredients(item.ingredients);
 
+  const availability =
+    item.availability ||
+    (item.isVisible === false || item.isAvailable === false ? "HIDDEN" : "AVAILABLE");
+  const isSoldOut = availability === "SOLD_OUT";
+
   return {
     id: item.id,
     categoryId: item.categoryId,
@@ -317,8 +322,10 @@ export function mapItemToView(item: MenuItem, currency: string, locale: string):
     discountStartsAt: discountInfo.startsAt,
     discountEndsAt: discountInfo.endsAt,
     imageUrl: item.imageUrl ?? null,
-    isVisible: item.isVisible ?? true,
-    isAvailable: item.isAvailable ?? true,
+    availability,
+    isSoldOut,
+    isVisible: availability !== "HIDDEN",
+    isAvailable: availability === "AVAILABLE",
     isFeatured: item.isFeatured ?? false,
     sortOrder: item.sortOrder ?? 0,
     variants: Array.isArray(item.variants)
@@ -395,9 +402,15 @@ export function mapToPresentationModel(
     },
   };
 
-  // 2. Filter & map menu items
+  // 2. Filter & map menu items (AVAILABLE and SOLD_OUT are shown publicly; HIDDEN is excluded)
   const eligibleItems = items
-    .filter((item) => includeHidden || (item.isVisible !== false && item.isAvailable !== false))
+    .filter((item) => {
+      if (includeHidden) return true;
+      const avail =
+        item.availability ||
+        (item.isVisible === false || item.isAvailable === false ? "HIDDEN" : "AVAILABLE");
+      return avail !== "HIDDEN";
+    })
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
   const mappedItems = eligibleItems.map((item) => mapItemToView(item, currency, locale));

@@ -6,6 +6,7 @@
  */
 
 import React from "react";
+import type { MenuItemAvailability } from "@/types/menu";
 
 // ============================================================================
 // 1. MENU PRESENTATION VIEW MODELS
@@ -111,6 +112,8 @@ export interface MenuItemView {
   discountEndsAt?: string | null;
   imageUrl: string | null;
   framing?: ImageFramingMetadata | null;
+  availability: MenuItemAvailability;
+  isSoldOut: boolean;
   isVisible: boolean;
   isAvailable: boolean;
   isFeatured: boolean;

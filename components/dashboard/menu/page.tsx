@@ -207,11 +207,20 @@ export default function MenuPage({ initialCategories = [] }: { initialCategories
     statusFilter === 'all'
       ? searchedItems
       : statusFilter === 'available'
-      ? searchedItems.filter((item: any) => item.isAvailable && item.isVisible !== false && !item.isDeleted)
+      ? searchedItems.filter((item: any) => {
+          const avail = item.availability || (item.isVisible !== false && item.isAvailable !== false ? 'AVAILABLE' : 'HIDDEN');
+          return avail === 'AVAILABLE' && !item.isDeleted;
+        })
+      : statusFilter === 'sold_out'
+      ? searchedItems.filter((item: any) => {
+          const avail = item.availability || (item.isVisible !== false && item.isAvailable === false ? 'SOLD_OUT' : 'AVAILABLE');
+          return avail === 'SOLD_OUT' && !item.isDeleted;
+        })
       : statusFilter === 'hidden'
-      ? searchedItems.filter((item: any) => item.isVisible === false && !item.isDeleted)
-      : statusFilter === 'unavailable'
-      ? searchedItems.filter((item: any) => !item.isAvailable && !item.isDeleted)
+      ? searchedItems.filter((item: any) => {
+          const avail = item.availability || (item.isVisible === false || item.isAvailable === false ? 'HIDDEN' : 'AVAILABLE');
+          return avail === 'HIDDEN' && !item.isDeleted;
+        })
       : statusFilter === 'featured'
       ? searchedItems.filter((item: any) => item.isFeatured && !item.isDeleted)
       : searchedItems;
@@ -445,8 +454,8 @@ export default function MenuPage({ initialCategories = [] }: { initialCategories
             >
               <option value="all">All Status</option>
               <option value="available">Available</option>
-              <option value="hidden">Hidden from Menu</option>
-              <option value="unavailable">Unavailable (Out of Stock)</option>
+              <option value="sold_out">Sold Out</option>
+              <option value="hidden">Hidden</option>
               <option value="featured">⭐ Featured Only</option>
             </select>
             <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
@@ -594,15 +603,28 @@ export default function MenuPage({ initialCategories = [] }: { initialCategories
 
                       {/* Status Badge */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        {item.isVisible === false ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> Hidden
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Available
-                          </span>
-                        )}
+                        {(() => {
+                          const avail = item.availability || (item.isVisible === false ? 'HIDDEN' : 'AVAILABLE');
+                          if (avail === 'HIDDEN') {
+                            return (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
+                                <span className="w-1.5 h-1.5 rounded-full bg-gray-400" /> Hidden
+                              </span>
+                            );
+                          }
+                          if (avail === 'SOLD_OUT') {
+                            return (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Sold Out
+                              </span>
+                            );
+                          }
+                          return (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/60">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Available
+                            </span>
+                          );
+                        })()}
                       </td>
 
                       {/* Actions */}
@@ -761,15 +783,28 @@ export default function MenuPage({ initialCategories = [] }: { initialCategories
                       <span className="font-black text-gray-900 text-lg">{formatPrice(effectivePrice, currency)}</span>
                     )}
 
-                    {item.isVisible === false ? (
-                      <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-gray-100 text-gray-600 border border-gray-200 rounded-md">
-                        Hidden
-                      </span>
-                    ) : (
-                      <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-[#FEF9EE] text-[#D97706] border border-amber-200/60 rounded-md">
-                        Available
-                      </span>
-                    )}
+                    {(() => {
+                      const avail = item.availability || (item.isVisible === false ? 'HIDDEN' : 'AVAILABLE');
+                      if (avail === 'HIDDEN') {
+                        return (
+                          <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-gray-100 text-gray-600 border border-gray-200 rounded-md">
+                            Hidden
+                          </span>
+                        );
+                      }
+                      if (avail === 'SOLD_OUT') {
+                        return (
+                          <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-amber-100 text-amber-800 border border-amber-300 rounded-md">
+                            Sold Out
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 bg-[#FEF9EE] text-[#D97706] border border-amber-200/60 rounded-md">
+                          Available
+                        </span>
+                      );
+                    })()}
                   </div>
 
                   <div className="flex gap-2">
