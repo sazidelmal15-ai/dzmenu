@@ -31,6 +31,7 @@ export interface Category {
   isActive?: boolean;
   isAvailable?: boolean;
   isDeleted?: boolean;
+  itemCount?: number;
 }
 
 interface Props {
@@ -65,6 +66,11 @@ export default function CategoryDrawer({ isOpen, onClose, onSaved, existingCateg
   const [optimizingImage, setOptimizingImage] = useState(false);
   const [imageOptimizationInfo, setImageOptimizationInfo] = useState<{ originalSize: number; optimizedSize: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Destructive Category Deletion Confirmation State
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeletingCategory, setIsDeletingCategory] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   // Per-category icon histories (scoped per restaurant account)
   const [categoryHistories, setCategoryHistories] = useState<Record<string, string[]>>({});
@@ -196,6 +202,8 @@ export default function CategoryDrawer({ isOpen, onClose, onSaved, existingCateg
     setEditImageFile(null);
     setImageOptimizationInfo(null);
     setError('');
+    setShowDeleteConfirm(false);
+    setDeleteError('');
   };
 
   const handleOpenNewCategory = () => {
@@ -217,6 +225,8 @@ export default function CategoryDrawer({ isOpen, onClose, onSaved, existingCateg
     setEditImageFile(null);
     setImageOptimizationInfo(null);
     setError('');
+    setShowDeleteConfirm(false);
+    setDeleteError('');
   };
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -233,10 +243,19 @@ export default function CategoryDrawer({ isOpen, onClose, onSaved, existingCateg
           optimizedSize: optimized.optimizedSize,
         });
       } catch (err: any) {
-        setError(err.message || 'فشل معالجة الصورة');
+        setError(err.message || 'Image processing failed');
       } finally {
         setOptimizingImage(false);
       }
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setEditImageFile(null);
+    setEditImageUrl('');
+    setImageOptimizationInfo(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -260,42 +279,58 @@ export default function CategoryDrawer({ isOpen, onClose, onSaved, existingCateg
   };
 
   const handleSaveEditedCategory = async () => {
+    if (!editName.trim()) {
+      setError('Category name is required');
+      return;
+    }
+
     try {
-      if (!editName.trim()) {
-        throw new Error('Please enter category name');
-      }
       setSaving(true);
       setError('');
 
       let finalImageUrl = editImageUrl;
+
+      // Handle Image Upload if a new file was selected
       if (editImageFile) {
-        finalImageUrl = await uploadImageFile(editImageFile);
+        const formData = new FormData();
+        formData.append('file', editImageFile);
+        formData.append('folder', 'categories');
+
+        const uploadRes = await fetch('/api/menu/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error('Image upload failed');
+        }
+
+        const uploadData = await uploadRes.json();
+        finalImageUrl = uploadData.url || uploadData.data?.url || '';
       }
 
       if (editingTarget && !isCreatingNew) {
-        // Update existing category in PostgreSQL (including icon, name, badge, shortName, etc.)
+        // Edit existing category
         await apiFetch(`/menu/categories/${editingTarget.id}`, {
           method: 'PATCH',
           body: JSON.stringify({
             name: editName.trim(),
-            shortName: editShortName.trim() || null,
-            icon: editIcon || '🍽️',
+            shortName: editShortName.trim() || editName.trim(),
+            icon: editIcon,
             description: editDescription.trim() || null,
             imageUrl: finalImageUrl || null,
             badge: editBadge || null,
-            isActive: editIsVisible,
             isAvailable: editIsVisible,
-            isDeleted: false,
           }),
         });
       } else {
-        // Create new category in PostgreSQL at the bottom of the list
-        const res = await apiFetch('/menu/categories', {
+        // Create new category
+        const res: any = await apiFetch('/menu/categories', {
           method: 'POST',
           body: JSON.stringify({
             name: editName.trim(),
-            shortName: editShortName.trim() || null,
-            icon: editIcon || '🍽️',
+            shortName: editShortName.trim() || editName.trim(),
+            icon: editIcon,
             description: editDescription.trim() || null,
             imageUrl: finalImageUrl || null,
             badge: editBadge || null,
@@ -324,28 +359,34 @@ export default function CategoryDrawer({ isOpen, onClose, onSaved, existingCateg
     }
   };
 
-  const handleDeleteCategory = async () => {
+  const handleDeleteCategory = () => {
     if (!editingTarget) return;
-    if (!confirm(`Are you sure you want to delete "${editName || 'this category'}"?`)) return;
+    setShowDeleteConfirm(true);
+    setDeleteError('');
+  };
+
+  const handleConfirmDeleteCategory = async () => {
+    if (!editingTarget) return;
 
     try {
-      setSaving(true);
-      setError('');
+      setIsDeletingCategory(true);
+      setDeleteError('');
 
       await apiFetch(`/menu/categories/${editingTarget.id}`, {
-        method: 'PATCH',
-        body: JSON.stringify({ isDeleted: true }),
+        method: 'DELETE',
       });
 
       setSelectedCategoryIds((prev) => prev.filter((id) => id !== editingTarget.id));
+      setAllDbCategories((prev) => prev.filter((c) => c.id !== editingTarget.id));
       refreshDbCategories();
       onSaved();
+      setShowDeleteConfirm(false);
       setEditingTarget(null);
       setIsCreatingNew(false);
     } catch (err: any) {
-      setError(err.message || 'Failed to delete category');
+      setDeleteError(err.message || 'Failed to delete category');
     } finally {
-      setSaving(false);
+      setIsDeletingCategory(false);
     }
   };
 
@@ -1029,11 +1070,11 @@ export default function CategoryDrawer({ isOpen, onClose, onSaved, existingCateg
                         className="w-full px-3.5 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition shadow-xs appearance-none cursor-pointer pr-10"
                       >
                         <option value="">None (No badge)</option>
-                        <option value="⭐ Popular">⭐ Popular (الأكثر طلباً)</option>
-                        <option value="🔥 Hot">🔥 Hot (مميز / حار)</option>
-                        <option value="✨ New">✨ New (جديد)</option>
-                        <option value="👨‍🍳 Chef's Choice">👨‍🍳 Chef's Choice (اختيار الشيف)</option>
-                        <option value="🏷️ Special Offer">🏷️ Special Offer (عرض خاص)</option>
+                        <option value="⭐ Popular">⭐ Popular</option>
+                        <option value="🔥 Hot">🔥 Hot</option>
+                        <option value="✨ New">✨ New</option>
+                        <option value="👨‍🍳 Chef's Choice">👨‍🍳 Chef's Choice</option>
+                        <option value="🏷️ Special Offer">🏷️ Special Offer</option>
                       </select>
                       <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-gray-400">
                         <ChevronDown size={16} />
@@ -1047,7 +1088,7 @@ export default function CategoryDrawer({ isOpen, onClose, onSaved, existingCateg
                   {/* Visibility Toggle Card */}
                   <div>
                     <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                      Visibility (حالة الظهور)
+                      Visibility
                     </label>
                     <div
                       onClick={() => setEditIsVisible(!editIsVisible)}
@@ -1098,7 +1139,7 @@ export default function CategoryDrawer({ isOpen, onClose, onSaved, existingCateg
                   <button
                     type="button"
                     onClick={handleDeleteCategory}
-                    disabled={saving}
+                    disabled={saving || isDeletingCategory}
                     className="px-3.5 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 hover:text-red-700 text-sm font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                     title="Delete this category"
                   >
@@ -1115,8 +1156,9 @@ export default function CategoryDrawer({ isOpen, onClose, onSaved, existingCateg
                       }
                       setEditingTarget(null);
                       setIsCreatingNew(false);
+                      setShowDeleteConfirm(false);
                     }}
-                    disabled={saving}
+                    disabled={saving || isDeletingCategory}
                     className="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 text-sm font-bold rounded-xl hover:bg-gray-50 transition cursor-pointer"
                   >
                     Back
@@ -1124,7 +1166,7 @@ export default function CategoryDrawer({ isOpen, onClose, onSaved, existingCateg
                   <button
                     type="button"
                     onClick={handleSaveEditedCategory}
-                    disabled={saving || optimizingImage}
+                    disabled={saving || optimizingImage || isDeletingCategory}
                     className="flex-1 max-w-[200px] flex justify-center items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white text-sm font-bold rounded-xl transition shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 disabled:opacity-50 cursor-pointer"
                   >
                     {saving ? (
@@ -1141,6 +1183,90 @@ export default function CategoryDrawer({ isOpen, onClose, onSaved, existingCateg
           )}
         </AnimatePresence>
       </motion.div>
+
+      {/* DESTRUCTIVE CATEGORY DELETION CONFIRMATION MODAL */}
+      <AnimatePresence>
+        {showDeleteConfirm && editingTarget && (
+          <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-xs z-[130] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="w-full max-w-sm bg-white rounded-2xl p-6 shadow-2xl border border-gray-100 flex flex-col"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mb-4 border border-red-100">
+                <Trash2 size={24} />
+              </div>
+
+              <h3 className="text-lg font-bold text-gray-900 mb-1">
+                Delete Category?
+              </h3>
+              <p className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-1.5">
+                <span>{editingTarget.icon || '🍽️'}</span>
+                <span>{editName || editingTarget.name}</span>
+              </p>
+
+              <div className="p-3.5 rounded-xl bg-red-50/80 border border-red-100 text-xs text-red-900 mb-4 leading-relaxed">
+                {typeof editingTarget.itemCount === 'number' && editingTarget.itemCount > 0 ? (
+                  <>
+                    <p className="font-bold mb-1">
+                      This category contains {editingTarget.itemCount} menu item{editingTarget.itemCount > 1 ? 's' : ''}.
+                    </p>
+                    <p className="text-red-800">
+                      Deleting this category will permanently delete:
+                    </p>
+                    <ul className="list-disc list-inside mt-1 space-y-0.5 font-medium text-red-800">
+                      <li>The category ({editName || editingTarget.name})</li>
+                      <li>All {editingTarget.itemCount} menu item{editingTarget.itemCount > 1 ? 's' : ''} inside it</li>
+                    </ul>
+                  </>
+                ) : (
+                  <p className="text-red-800">
+                    This category contains no menu items. Deleting it will permanently remove the category.
+                  </p>
+                )}
+                <p className="font-bold mt-2.5 text-red-900">
+                  This action cannot be undone.
+                </p>
+              </div>
+
+              {deleteError && (
+                <p className="text-xs text-red-600 font-semibold mb-3">
+                  {deleteError}
+                </p>
+              )}
+
+              <div className="flex items-center gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setDeleteError('');
+                  }}
+                  disabled={isDeletingCategory}
+                  className="px-4 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-700 hover:bg-gray-50 transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDeleteCategory}
+                  disabled={isDeletingCategory}
+                  className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-md shadow-red-600/20 disabled:opacity-50 cursor-pointer"
+                >
+                  {isDeletingCategory ? (
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : typeof editingTarget.itemCount === 'number' && editingTarget.itemCount > 0 ? (
+                    'Delete Category & Items'
+                  ) : (
+                    'Delete Category'
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* ICON LIBRARY MODAL SHELL */}
       <IconLibraryModal

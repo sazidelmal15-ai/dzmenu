@@ -1,9 +1,9 @@
 import "server-only";
-import { getDb } from "../client";
+import { getDb, type DatabaseAdapter } from "../client";
 import type { Category } from "@/types/menu";
 
 /**
- * Category Query Helpers (Soft Delete Enforced)
+ * Category Query Helpers (Soft & Atomic Cascade Delete Enforced)
  */
 export const categoryQueries = {
   /**
@@ -27,6 +27,117 @@ export const categoryQueries = {
        ORDER BY c.sort_order ASC, c.created_at ASC`,
       [restaurantId]
     );
+  },
+
+  /**
+   * Resolves a category by its ID with strict tenant isolation.
+   */
+  async findById(
+    categoryId: string,
+    restaurantId: string,
+    dbOrTx?: DatabaseAdapter
+  ): Promise<Category | null> {
+    const db = dbOrTx || getDb();
+    return db.queryOne<Category>(
+      `SELECT c.id, c.restaurant_id AS "restaurantId", c.name, c.description, c.icon,
+              c.short_name AS "shortName", c.image_url AS "imageUrl", c.badge,
+              c.sort_order AS "sortOrder",
+              COALESCE(c.is_active, TRUE) AS "isActive",
+              (c.deleted_at IS NOT NULL) AS "isDeleted",
+              c.created_at AS "createdAt", c.updated_at AS "updatedAt",
+              COUNT(mi.id)::int AS "itemCount"
+       FROM categories c
+       LEFT JOIN menu_items mi ON mi.category_id = c.id AND mi.deleted_at IS NULL
+       WHERE c.id = $1 AND c.restaurant_id = $2 AND c.deleted_at IS NULL
+       GROUP BY c.id`,
+      [categoryId, restaurantId]
+    );
+  },
+
+  /**
+   * Counts active menu items belonging to a category for a specific tenant.
+   */
+  async countItems(
+    categoryId: string,
+    restaurantId: string,
+    dbOrTx?: DatabaseAdapter
+  ): Promise<number> {
+    const db = dbOrTx || getDb();
+    const row = await db.queryOne<{ count: string | number }>(
+      `SELECT COUNT(*)::int AS count
+       FROM menu_items
+       WHERE category_id = $1 AND restaurant_id = $2 AND deleted_at IS NULL`,
+      [categoryId, restaurantId]
+    );
+    return Number(row?.count || 0);
+  },
+
+  /**
+   * Permanently deletes a category AND all its contained menu items atomically.
+   * Scoped strictly to the restaurant tenant to guarantee cross-tenant isolation.
+   */
+  async deleteCascade(
+    categoryId: string,
+    restaurantId: string,
+    dbOrTx?: DatabaseAdapter
+  ): Promise<{
+    deleted: boolean;
+    category: Category | null;
+    deletedItemCount: number;
+    deletedImageUrls: string[];
+  }> {
+    const db = dbOrTx || getDb();
+
+    const executeInTx = async (tx: DatabaseAdapter) => {
+      // 1. Verify existence & tenant ownership
+      const category = await tx.queryOne<Category>(
+        `SELECT id, restaurant_id AS "restaurantId", name
+         FROM categories
+         WHERE id = $1 AND restaurant_id = $2`,
+        [categoryId, restaurantId]
+      );
+
+      if (!category) {
+        return {
+          deleted: false,
+          category: null,
+          deletedItemCount: 0,
+          deletedImageUrls: [],
+        };
+      }
+
+      // 2. Delete all menu items belonging to this category for this tenant atomically
+      const deletedItems = await tx.query<{ id: string; imageUrl: string | null }>(
+        `DELETE FROM menu_items
+         WHERE category_id = $1 AND restaurant_id = $2
+         RETURNING id, image_url AS "imageUrl"`,
+        [categoryId, restaurantId]
+      );
+
+      // 3. Delete the category itself
+      await tx.query(
+        `DELETE FROM categories
+         WHERE id = $1 AND restaurant_id = $2`,
+        [categoryId, restaurantId]
+      );
+
+      const deletedImageUrls = deletedItems
+        .map((i) => i.imageUrl)
+        .filter((url): url is string => Boolean(url));
+
+      return {
+        deleted: true,
+        category,
+        deletedItemCount: deletedItems.length,
+        deletedImageUrls,
+      };
+    };
+
+    if (dbOrTx) {
+      return executeInTx(dbOrTx);
+    }
+
+    return getDb().transaction(executeInTx);
   },
 
   /**
@@ -168,3 +279,4 @@ export const categoryQueries = {
     return true;
   },
 };
+

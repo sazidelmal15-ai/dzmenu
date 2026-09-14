@@ -147,18 +147,30 @@ export async function syncCategoriesAction(
   }
 }
 
+import { deleteStorageFile } from "@/lib/storage";
+
 /**
- * Soft deletes a category (Subscription Protected).
+ * Permanently deletes a category and all its contained menu items atomically (Subscription Protected).
  */
 export async function deleteCategoryAction(
   categoryId: string,
   restaurantId: string
-): Promise<MenuActionResult<void>> {
+): Promise<MenuActionResult<{ deletedItemCount: number }>> {
   try {
     await requireActiveSubscription(restaurantId);
-    await categoryQueries.softDelete(categoryId, restaurantId);
+    const result = await categoryQueries.deleteCascade(categoryId, restaurantId);
+    if (!result.deleted) {
+      return { success: false, error: "Category not found or unauthorized" };
+    }
+
+    // Decoupled asynchronous cleanup of deleted item images
+    for (const imgUrl of result.deletedImageUrls) {
+      deleteStorageFile(imgUrl).catch(() => {});
+    }
+
     revalidatePath("/dashboard");
-    return { success: true };
+    revalidatePath("/menu");
+    return { success: true, data: { deletedItemCount: result.deletedItemCount } };
   } catch (error) {
     console.error("deleteCategoryAction error:", error);
     const msg = error instanceof Error ? error.message : "Failed to delete category";
