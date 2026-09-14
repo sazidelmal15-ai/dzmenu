@@ -29,18 +29,17 @@ export async function generateQrSvg(
   const centerPos = (100 - logoSize) / 2;
   const shieldRadius = settings.cornerStyle === "square" ? "2" : "6";
 
-  const logoShieldSvg = `
-    <!-- Center Logo Shield & Icon -->
-    <rect x="${centerPos - 1.5}%" y="${centerPos - 1.5}%" width="${logoSize + 3}%" height="${logoSize + 3}%" rx="${shieldRadius}" fill="${settings.backgroundColor || '#FFFFFF'}" stroke="${settings.foregroundColor || '#18181B'}" stroke-width="1.2" stroke-opacity="0.15" />
-    <defs>
-      <clipPath id="qr-logo-clip">
-        <rect x="${centerPos}%" y="${centerPos}%" width="${logoSize}%" height="${logoSize}%" rx="${shieldRadius}" />
-      </clipPath>
-    </defs>
-    <image href="${logoUrl}" x="${centerPos}%" y="${centerPos}%" width="${logoSize}%" height="${logoSize}%" preserveAspectRatio="xMidYMid slice" clip-path="url(#qr-logo-clip)" />
-  </svg>`;
+  const logoShieldSvg = `<!-- Center Logo Shield & Icon -->
+  <rect x="${centerPos - 1.5}%" y="${centerPos - 1.5}%" width="${logoSize + 3}%" height="${logoSize + 3}%" rx="${shieldRadius}" fill="${settings.backgroundColor || '#FFFFFF'}" stroke="${settings.foregroundColor || '#18181B'}" stroke-width="1.2" stroke-opacity="0.15" />
+  <defs>
+    <clipPath id="qr-logo-clip">
+      <rect x="${centerPos}%" y="${centerPos}%" width="${logoSize}%" height="${logoSize}%" rx="${shieldRadius}" />
+    </clipPath>
+  </defs>
+  <image href="${logoUrl}" x="${centerPos}%" y="${centerPos}%" width="${logoSize}%" height="${logoSize}%" preserveAspectRatio="xMidYMid slice" clip-path="url(#qr-logo-clip)" />
+</svg>`;
 
-  return rawSvg.replace("</svg>", logoShieldSvg);
+  return rawSvg.trim().replace(/<\/svg>$/, logoShieldSvg);
 }
 
 /**

@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Printer, Wifi, Sparkles, Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Printer, Wifi, ChevronLeft, ChevronRight } from "lucide-react";
 import type { QrStudioSettings } from "@/types/qr-studio";
 import { generateQrSvg } from "@/lib/qr/generator";
-import { buildTrackedMenuUrl } from "@/lib/analytics/urls";
 
 interface PrintableStandModalProps {
   isOpen: boolean;

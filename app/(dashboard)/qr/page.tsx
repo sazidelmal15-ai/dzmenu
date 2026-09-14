@@ -5,19 +5,13 @@ import {
   QrCode,
   Download,
   Printer,
-  Sparkles,
   Share2,
   Wifi,
   Eye,
-  Sliders,
-  Store,
   Layers,
   Palette,
-  Image as ImageIcon,
   Type,
   TrendingUp,
-  Flame,
-  ArrowUpRight,
 } from "lucide-react";
 import type { QrStudioSettings } from "@/types/qr-studio";
 import { DEFAULT_QR_SETTINGS } from "@/types/qr-studio";
