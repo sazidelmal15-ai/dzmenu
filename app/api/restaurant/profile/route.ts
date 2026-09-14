@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/context";
 import { restaurantQueries } from "@/lib/db/queries";
 import { validateSubdomain } from "@/lib/constants/reserved-subdomains";
+import type { RestaurantProfileUpdatePayload } from "@/types/restaurant";
 
 /**
  * GET /api/restaurant/profile
@@ -22,9 +23,6 @@ export async function GET() {
     const restaurant = restaurants[0];
     if (restaurant.logoUrl && restaurant.logoUrl.startsWith("blob:")) {
       restaurant.logoUrl = null;
-    }
-    if (restaurant.coverUrl && restaurant.coverUrl.startsWith("blob:")) {
-      restaurant.coverUrl = null;
     }
     return NextResponse.json({ success: true, restaurant }, { status: 200 });
   } catch (error: any) {
@@ -77,17 +75,15 @@ export async function PUT(request: NextRequest) {
       }
     }
 
-    // 2. Perform DB update
-    const payload: any = {};
+    // 2. Perform DB update (strictly scoped to profile fields)
+    const payload: RestaurantProfileUpdatePayload = {};
     if (body.name !== undefined) payload.name = body.name;
     if (body.slug !== undefined) payload.slug = body.slug;
     if (body.isSubdomainLocked !== undefined) payload.isSubdomainLocked = body.isSubdomainLocked;
     if (body.logoUrl !== undefined) payload.logoUrl = body.logoUrl;
-    if (body.coverUrl !== undefined) payload.coverUrl = body.coverUrl;
     if (body.tagline !== undefined) payload.tagline = body.tagline;
     if (body.description !== undefined) payload.description = body.description;
     if (body.cuisineTypes !== undefined) payload.cuisineTypes = Array.isArray(body.cuisineTypes) ? body.cuisineTypes : [];
-    if (body.currency !== undefined) payload.currency = body.currency;
     if (body.phone !== undefined) payload.phone = body.phone;
     if (body.whatsapp !== undefined) payload.whatsapp = body.whatsapp;
     if (body.city !== undefined) payload.city = body.city;
@@ -100,7 +96,6 @@ export async function PUT(request: NextRequest) {
     if (body.facebookUrl !== undefined) payload.facebookUrl = body.facebookUrl;
     if (body.wifiSsid !== undefined) payload.wifiSsid = body.wifiSsid;
     if (body.wifiPassword !== undefined) payload.wifiPassword = body.wifiPassword;
-    if (body.status !== undefined) payload.status = body.status;
 
     const updated = await restaurantQueries.updateProfile(currentRestaurant.id, payload);
 

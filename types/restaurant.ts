@@ -43,11 +43,9 @@ export interface RestaurantProfileUpdatePayload {
   slug?: string;
   isSubdomainLocked?: boolean;
   logoUrl?: string | null;
-  coverUrl?: string | null;
   tagline?: string | null;
   description?: string | null;
   cuisineTypes?: string[];
-  currency?: string;
   phone?: string | null;
   whatsapp?: string | null;
   city?: string | null;
@@ -60,7 +58,6 @@ export interface RestaurantProfileUpdatePayload {
   facebookUrl?: string | null;
   wifiSsid?: string | null;
   wifiPassword?: string | null;
-  status?: RestaurantStatus;
 }
 
 /**

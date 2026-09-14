@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo } from "react";
 import {
   Store,
   Camera,
-  Image as ImageIcon,
   Copy,
   Check,
   Phone,
@@ -111,7 +110,6 @@ export default function RestaurantProfilePage() {
 
   // 1. Branding & Subdomain State
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [isSubdomainLocked, setIsSubdomainLocked] = useState(false);
   const [permanentSubdomain, setPermanentSubdomain] = useState("");
   const [inputSubdomain, setInputSubdomain] = useState("");
@@ -149,7 +147,6 @@ export default function RestaurantProfilePage() {
   const [name, setName] = useState("");
   const [tagline, setTagline] = useState("");
   const [selectedCuisines, setSelectedCuisines] = useState<string[]>([]);
-  const [currency, setCurrency] = useState("DZD");
   const [description, setDescription] = useState("");
 
   // 3. Contact & Location State
@@ -169,10 +166,6 @@ export default function RestaurantProfilePage() {
   const [wifiSsid, setWifiSsid] = useState("");
   const [wifiPassword, setWifiPassword] = useState("");
   const [showWifiPassword, setShowWifiPassword] = useState(false);
-
-  // 6. Online / Maintenance Status State
-  const [status, setStatus] = useState<string>("ACTIVE");
-  const [togglingStatus, setTogglingStatus] = useState<boolean>(false);
 
   // Instant Synchronous Verifications (0ms latency, zero server load)
   const googleMapsVerification = useMemo(() => {
@@ -253,7 +246,6 @@ export default function RestaurantProfilePage() {
             name: r.name || "",
             tagline: r.tagline || "",
             description: r.description || "",
-            currency: r.currency || "DZD",
             selectedCuisines: Array.isArray(r.cuisineTypes) ? r.cuisineTypes : [],
             phone: r.phone || "",
             whatsapp: r.whatsapp || "",
@@ -268,15 +260,12 @@ export default function RestaurantProfilePage() {
             wifiSsid: r.wifiSsid || "",
             wifiPassword: r.wifiPassword || "",
             logoPreview: r.logoUrl || null,
-            coverPreview: r.coverUrl || null,
             inputSubdomain: r.slug || "",
-            status: r.status || "ACTIVE",
           };
 
           setName(loadedData.name);
           setTagline(loadedData.tagline);
           setDescription(loadedData.description);
-          setCurrency(loadedData.currency);
           setSelectedCuisines(loadedData.selectedCuisines);
           setPhone(loadedData.phone);
           setWhatsapp(loadedData.whatsapp);
@@ -291,11 +280,9 @@ export default function RestaurantProfilePage() {
           setWifiSsid(loadedData.wifiSsid);
           setWifiPassword(loadedData.wifiPassword);
           setLogoPreview(loadedData.logoPreview);
-          setCoverPreview(loadedData.coverPreview);
           setIsSubdomainLocked(!!r.isSubdomainLocked);
           setPermanentSubdomain(r.slug || "");
           setInputSubdomain(r.slug || "");
-          setStatus(loadedData.status);
 
           setInitialData(loadedData);
           setInitialDataLoaded(true);
@@ -314,7 +301,6 @@ export default function RestaurantProfilePage() {
       name !== initialData.name ||
       tagline !== initialData.tagline ||
       description !== initialData.description ||
-      currency !== initialData.currency ||
       JSON.stringify(selectedCuisines) !== JSON.stringify(initialData.selectedCuisines) ||
       phone !== initialData.phone ||
       whatsapp !== initialData.whatsapp ||
@@ -329,7 +315,6 @@ export default function RestaurantProfilePage() {
       wifiSsid !== initialData.wifiSsid ||
       wifiPassword !== initialData.wifiPassword ||
       logoPreview !== initialData.logoPreview ||
-      coverPreview !== initialData.coverPreview ||
       (!isSubdomainLocked && inputSubdomain !== initialData.inputSubdomain)
     );
   }, [
@@ -338,7 +323,6 @@ export default function RestaurantProfilePage() {
     name,
     tagline,
     description,
-    currency,
     selectedCuisines,
     phone,
     whatsapp,
@@ -353,7 +337,6 @@ export default function RestaurantProfilePage() {
     wifiSsid,
     wifiPassword,
     logoPreview,
-    coverPreview,
     inputSubdomain,
     isSubdomainLocked,
   ]);
@@ -498,7 +481,6 @@ export default function RestaurantProfilePage() {
         name,
         tagline,
         description,
-        currency,
         cuisineTypes: selectedCuisines,
         phone,
         whatsapp,
@@ -513,8 +495,6 @@ export default function RestaurantProfilePage() {
         wifiSsid,
         wifiPassword,
         logoUrl: logoPreview,
-        coverUrl: coverPreview,
-        status,
       };
 
       const res = await fetch("/api/restaurant/profile", {
@@ -532,7 +512,6 @@ export default function RestaurantProfilePage() {
           name,
           tagline,
           description,
-          currency,
           selectedCuisines: [...selectedCuisines],
           phone,
           whatsapp,
@@ -547,8 +526,6 @@ export default function RestaurantProfilePage() {
           wifiSsid,
           wifiPassword,
           logoPreview,
-          coverPreview,
-          status,
         });
         showToast("Profile changes saved successfully!", "success");
       }
@@ -556,34 +533,6 @@ export default function RestaurantProfilePage() {
       showToast("An error occurred while saving.", "error");
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleToggleStatus = async (newStatus: "ACTIVE" | "INACTIVE") => {
-    try {
-      setTogglingStatus(true);
-      const res = await fetch("/api/restaurant/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
-      const json = await res.json();
-      if (!res.ok) {
-        showToast(json.error || "Failed to update restaurant status.", "error");
-      } else {
-        setStatus(newStatus);
-        setInitialData((prev: any) => ({ ...prev, status: newStatus }));
-        showToast(
-          newStatus === "ACTIVE"
-            ? "🎉 Restaurant is now LIVE & Online for visitors!"
-            : "⏸️ Restaurant is now in Maintenance Mode (Paused).",
-          "success"
-        );
-      }
-    } catch (err) {
-      showToast("Failed to toggle status.", "error");
-    } finally {
-      setTogglingStatus(false);
     }
   };
 
@@ -641,91 +590,6 @@ export default function RestaurantProfilePage() {
         </motion.button>
       </div>
 
-      {/* 1.1 Store Status & Maintenance Mode Switch */}
-      <div className="bg-white p-5 sm:p-6 rounded-3xl border border-[#F3F0E6] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3.5">
-          <div
-            className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 border ${
-              status === "ACTIVE"
-                ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-                : "bg-amber-50 text-amber-600 border-amber-200"
-            }`}
-          >
-            {status === "ACTIVE" ? (
-              <Globe size={22} className="text-emerald-600" />
-            ) : (
-              <AlertCircle size={22} className="text-amber-600" />
-            )}
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold text-gray-900">
-                Menu Visibility Status
-              </h3>
-              <span
-                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase border ${
-                  status === "ACTIVE"
-                    ? "bg-emerald-100/70 text-emerald-800 border-emerald-200"
-                    : "bg-amber-100/70 text-amber-800 border-amber-200"
-                }`}
-              >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    status === "ACTIVE" ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
-                  }`}
-                />
-                <span>{status === "ACTIVE" ? "Live Online" : "Paused (Maintenance)"}</span>
-              </span>
-            </div>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {status === "ACTIVE"
-                ? "Your digital QR menu is live and active for all customers."
-                : "Visitors see your branded maintenance card while you make updates."}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3 shrink-0 self-end md:self-auto">
-          {/* Quick Preview Link */}
-          <a
-            href={`/m/${permanentSubdomain || inputSubdomain}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 border border-gray-200 transition"
-          >
-            <Eye size={14} />
-            <span>{status === "ACTIVE" ? "View Live Menu" : "Preview Maintenance"}</span>
-          </a>
-
-          {/* Toggle Switch Button */}
-          <button
-            type="button"
-            onClick={() => handleToggleStatus(status === "ACTIVE" ? "INACTIVE" : "ACTIVE")}
-            disabled={togglingStatus}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95 disabled:opacity-50 ${
-              status === "ACTIVE"
-                ? "bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20"
-                : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20"
-            }`}
-          >
-            {togglingStatus ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : status === "ACTIVE" ? (
-              <EyeOff size={14} />
-            ) : (
-              <Sparkles size={14} />
-            )}
-            <span>
-              {togglingStatus
-                ? "Updating..."
-                : status === "ACTIVE"
-                ? "Pause Website"
-                : "Go Live"}
-            </span>
-          </button>
-        </div>
-      </div>
-
       {/* 2. Navigation Tabs with Framer Motion Sliding Pill */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 scrollbar-none p-1.5 bg-white/80 backdrop-blur-md rounded-2xl border border-[#F3F0E6] shadow-xs">
         {[
@@ -773,64 +637,6 @@ export default function RestaurantProfilePage() {
             transition={{ duration: 0.22, ease: "easeOut" }}
             className="space-y-6"
           >
-            {/* Cover Banner Card */}
-            <div className="bg-white rounded-3xl p-6 border border-[#F3F0E6] shadow-xs space-y-4">
-              <div>
-                <h2 className="text-base font-bold text-gray-900">Cover Banner</h2>
-                <p className="text-xs text-gray-500">Recommended: 1200 × 400 px (PNG, JPG, or WebP up to 5MB)</p>
-              </div>
-
-              <div className="relative w-full h-44 sm:h-56 rounded-2xl overflow-hidden border-2 border-dashed border-[#F3F0E6] bg-amber-50/20 group transition-all duration-300 hover:border-amber-300/80 hover:shadow-md">
-                {coverPreview ? (
-                  <img
-                    src={coverPreview}
-                    alt="Cover"
-                    className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.02]"
-                  />
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-center p-6">
-                    <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-2">
-                      <ImageIcon size={22} />
-                    </div>
-                    <p className="text-xs font-bold text-gray-700">Upload your menu header banner</p>
-                  </div>
-                )}
-
-                <label
-                  className="absolute bottom-4 right-4 bg-white/95 hover:bg-white text-gray-800 text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm border border-gray-200 cursor-pointer flex items-center gap-1.5 transition-colors"
-                >
-                  <Camera size={14} className="text-amber-600" />
-                  <span>{coverPreview ? "Change Image" : "Upload Banner"}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={async (e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        try {
-                          const dataUrl = await compressImageFile(file, 1200, 500, 0.85);
-                          setCoverPreview(dataUrl);
-                        } catch (err) {
-                          console.error("Failed to process banner image:", err);
-                        }
-                      }
-                    }}
-                  />
-                </label>
-
-                {coverPreview && (
-                  <button
-                    type="button"
-                    onClick={() => setCoverPreview(null)}
-                    className="absolute bottom-4 left-4 bg-red-600/90 hover:bg-red-700 text-white text-xs font-bold px-3 py-2 rounded-xl shadow-sm cursor-pointer transition-colors"
-                  >
-                    Remove
-                  </button>
-                )}
-              </div>
-            </div>
-
             {/* Logo & Subdomain Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               
@@ -1072,7 +878,7 @@ export default function RestaurantProfilePage() {
               <p className="text-xs text-gray-500">Essential information displayed in your menu header and About section.</p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
                 <label className="block text-xs font-bold text-gray-700 mb-1.5">
                   Restaurant Name
@@ -1098,22 +904,6 @@ export default function RestaurantProfilePage() {
                   placeholder="e.g. Fresh gourmet burgers & artisanal shakes 🔥"
                   className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 transition-all"
                 />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-gray-700 mb-1.5">
-                  Menu Currency
-                </label>
-                <select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 cursor-pointer transition-all"
-                >
-                  <option value="DZD">🇩🇿 Algerian Dinar (DZD / DA)</option>
-                  <option value="SAR">🇸🇦 Saudi Riyal (SAR)</option>
-                  <option value="EUR">🇪🇺 Euro (€ / EUR)</option>
-                  <option value="USD">🇺🇸 US Dollar ($ / USD)</option>
-                </select>
               </div>
             </div>
 

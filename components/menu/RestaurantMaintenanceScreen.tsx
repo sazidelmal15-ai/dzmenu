@@ -1,19 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import {
-  Store,
-  Clock,
   MapPin,
   Phone,
   Navigation,
-  Globe,
-  Sparkles,
   AlertTriangle,
-  ArrowRight,
   Eye,
-  CheckCircle2,
-  Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Restaurant } from "@/types/restaurant";
@@ -27,30 +20,6 @@ export function RestaurantMaintenanceScreen({
   restaurant,
   isOwner = false,
 }: RestaurantMaintenanceScreenProps) {
-  const [activating, setActivating] = useState(false);
-  const [activatedSuccess, setActivatedSuccess] = useState(false);
-
-  const handleActivate = async () => {
-    try {
-      setActivating(true);
-      const res = await fetch("/api/restaurant/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "ACTIVE" }),
-      });
-      if (res.ok) {
-        setActivatedSuccess(true);
-        setTimeout(() => {
-          window.location.reload();
-        }, 1200);
-      }
-    } catch (err) {
-      console.error("Failed to activate restaurant:", err);
-    } finally {
-      setActivating(false);
-    }
-  };
-
   const mapsUrl =
     restaurant.googleMapsUrl ||
     (restaurant.address || restaurant.city
@@ -75,7 +44,7 @@ export function RestaurantMaintenanceScreen({
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-amber-500/10 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-72 h-72 bg-yellow-500/10 rounded-full blur-[100px] pointer-events-none" />
 
-      {/* 2. Owner Top Warning & Quick-Live Bar */}
+      {/* 2. Owner Top Warning Bar */}
       {isOwner && (
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -100,27 +69,11 @@ export function RestaurantMaintenanceScreen({
             <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
               <a
                 href={`/m/${restaurant.slug}?preview_live=true`}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white transition border border-white/10"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white transition border border-white/10"
               >
                 <Eye size={13} />
-                <span>Preview</span>
+                <span>Preview Menu</span>
               </a>
-
-              <button
-                type="button"
-                onClick={handleActivate}
-                disabled={activating || activatedSuccess}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-md shadow-emerald-950/40 transition active:scale-95 disabled:opacity-60 cursor-pointer"
-              >
-                {activating ? (
-                  <Loader2 size={13} className="animate-spin" />
-                ) : activatedSuccess ? (
-                  <CheckCircle2 size={13} className="text-white" />
-                ) : (
-                  <Sparkles size={13} />
-                )}
-                <span>{activatedSuccess ? "Online!" : "Turn Online"}</span>
-              </button>
             </div>
           </div>
         </motion.div>

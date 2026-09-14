@@ -232,10 +232,6 @@ export const restaurantQueries = {
       sets.push(`logo_url = $${paramIdx++}`);
       values.push(data.logoUrl || null);
     }
-    if (data.coverUrl !== undefined) {
-      sets.push(`cover_url = $${paramIdx++}`);
-      values.push(data.coverUrl || null);
-    }
     if (data.tagline !== undefined) {
       sets.push(`tagline = $${paramIdx++}`);
       values.push(data.tagline ? data.tagline.trim() : null);
@@ -295,14 +291,6 @@ export const restaurantQueries = {
     if (data.wifiPassword !== undefined) {
       sets.push(`wifi_password = $${paramIdx++}`);
       values.push(data.wifiPassword ? data.wifiPassword.trim() : null);
-    }
-    if (data.currency !== undefined) {
-      sets.push(`currency = $${paramIdx++}`);
-      values.push(data.currency);
-    }
-    if (data.status !== undefined) {
-      sets.push(`status = $${paramIdx++}`);
-      values.push(data.status);
     }
 
     if (sets.length === 0) {
