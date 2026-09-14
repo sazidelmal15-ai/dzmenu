@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { restaurantQueries, categoryQueries, menuItemQueries } from "@/lib/db/queries";
 import { resolveRestaurantTheme } from "@/lib/themes/resolver";
 import { getCurrentUser } from "@/lib/auth/context";
+import { hasActiveSubscription } from "@/lib/permissions/guards";
 import { mapToPresentationModel } from "@/lib/menu/presentation-mapper";
 import { ThemeDispatcher } from "@/components/theme-engine/ThemeDispatcher";
 import { THEME_REGISTRY } from "@/themes/registry";
@@ -27,7 +28,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  if (restaurant.status !== "ACTIVE") {
+  const hasActive = await hasActiveSubscription(restaurant.id);
+
+  if (restaurant.status !== "ACTIVE" || !hasActive) {
     return {
       title: `${restaurant.name} | Under Maintenance`,
       description: `The digital menu for ${restaurant.name} is temporarily paused.`,
@@ -66,12 +69,16 @@ export default async function PublicMenuPage({ params, searchParams }: PageProps
   const isAuthorizedPreview = Boolean(preview_theme && isOwner);
   const isAuthorizedLiveOverride = Boolean(preview_live === "true" && isOwner);
 
-  // 3. If restaurant is paused / under maintenance and not in authorized preview mode
-  if (restaurant.status !== "ACTIVE" && !isAuthorizedPreview && !isAuthorizedLiveOverride) {
+  // 3. Check subscription & lifecycle status (must be ACTIVE with unexpired subscription)
+  const hasActive = await hasActiveSubscription(restaurant.id);
+  const isLiveForPublic = restaurant.status === "ACTIVE" && hasActive;
+
+  // 4. If restaurant is paused / expired / under maintenance and not in authorized preview mode
+  if (!isLiveForPublic && !isAuthorizedPreview && !isAuthorizedLiveOverride) {
     return <RestaurantMaintenanceScreen restaurant={restaurant} isOwner={isOwner} />;
   }
 
-  // 4. Resolve theme, categories & menu items in parallel for maximum speed
+  // 5. Resolve theme, categories & menu items in parallel for maximum speed
   const [theme, categories, items] = await Promise.all([
     resolveRestaurantTheme(restaurant.id, {
       previewThemeId: preview_theme,
@@ -81,18 +88,18 @@ export default async function PublicMenuPage({ params, searchParams }: PageProps
     menuItemQueries.listByRestaurantId(restaurant.id),
   ]);
 
-  // 5. Convert to clean decoupled presentation model
+  // 6. Convert to clean decoupled presentation model
   const presentationModel = mapToPresentationModel(restaurant, categories, items);
   const themeId = (theme.presetId || "gourmet").toLowerCase();
 
-  // 6. 100% V2 Unified Presentation Dispatcher
+  // 7. 100% V2 Unified Presentation Dispatcher
   const targetThemeId = THEME_REGISTRY[themeId] ? themeId : "gourmet";
   const rawSettings = (theme.settings as unknown as Record<string, unknown>) || {};
   const imageSlots = (rawSettings.image_slots as Record<string, string | null>) || {};
 
   return (
     <>
-      {restaurant.status !== "ACTIVE" && isOwner && (
+      {!isLiveForPublic && isOwner && (
         <div className="sticky top-0 z-50 bg-amber-500 text-black px-4 py-2 text-xs font-bold text-center flex items-center justify-center gap-2 shadow-md">
           <span>⚠️ Owner Mode: Menu is currently PAUSED for visitors.</span>
           <a
