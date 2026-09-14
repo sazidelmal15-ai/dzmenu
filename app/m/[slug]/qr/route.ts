@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { restaurantQueries, analyticsQueries } from "@/lib/db/queries";
+import { restaurantQueries } from "@/lib/db/queries";
+import { hasActiveSubscription } from "@/lib/permissions/guards";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /m/[slug]/qr (Accessed directly via subdomain like salem.localhost:3000/qr or salem.dzmenu.com/qr)
  * Instant QR Scan Bridge:
- * 1. Logs verified QR scan in analytics database.
- * 2. Instantly redirects (302) to the clean root menu (/).
+ * 1. Resolves restaurant and verifies active subscription status.
+ * 2. 302 Redirects to /?src=qr for canonical client-side ingestion via MenuTracker.
+ * 3. Does NOT directly insert analytics records (avoids double-counting).
  */
 export async function GET(
   request: NextRequest,
@@ -19,42 +21,21 @@ export async function GET(
     const restaurant = await restaurantQueries.findBySlug(slug);
 
     if (restaurant) {
-      // Generate / read ephemeral session identifier from cookie or header
-      let sessionId = request.cookies.get("dz_scan_sid")?.value;
-      if (!sessionId) {
-        sessionId = "qr_" + Math.random().toString(36).substring(2, 12) + "_" + Date.now().toString(36);
-      }
+      const isSubscribed = await hasActiveSubscription(restaurant.id);
+      const isActive = restaurant.status === "ACTIVE" && isSubscribed;
 
-      const ua = request.headers.get("user-agent") || "";
-      const isMobile = /mobile|iphone|ipod|android/i.test(ua);
-
-      // Record QR scan
-      await analyticsQueries.recordMenuVisit({
-        restaurantId: restaurant.id,
-        source: "qr",
-        tableNumber: null,
-        sessionId,
-        deviceType: isMobile ? "mobile" : "desktop",
-      });
-
-      // 302 Redirect to clean home page
-      const redirectUrl = new URL("/", request.url);
-      const response = NextResponse.redirect(redirectUrl, { status: 302 });
-
-      // Set 30-min cookie for session deduplication
-      response.cookies.set("dz_scan_sid", sessionId, {
-        maxAge: 1800, // 30 minutes
-        path: "/",
-        sameSite: "lax",
-      });
-
-      return response;
+      // Active restaurant -> 302 redirect with canonical ?src=qr
+      // Inactive/Expired -> redirect cleanly to / (renders MaintenanceScreen, skips MenuTracker)
+      const redirectPath = isActive ? "/?src=qr" : "/";
+      const redirectUrl = new URL(redirectPath, request.url);
+      return NextResponse.redirect(redirectUrl, { status: 302 });
     }
   } catch (error) {
-    console.error("[QR Bridge] Error recording scan:", error);
+    console.error("[QR Bridge] Error resolving scan route:", error);
   }
 
   // Fallback: Redirect cleanly to root
   const fallbackUrl = new URL("/", request.url);
   return NextResponse.redirect(fallbackUrl, { status: 302 });
 }
+

@@ -7,9 +7,6 @@ import {
   Printer,
   Sparkles,
   Share2,
-  Copy,
-  Check,
-  ExternalLink,
   Wifi,
   Eye,
   Sliders,
@@ -26,7 +23,6 @@ import type { QrStudioSettings } from "@/types/qr-studio";
 import { DEFAULT_QR_SETTINGS } from "@/types/qr-studio";
 import type { QrAnalyticsSummary } from "@/types/analytics";
 import { generateQrSvg, generateQrPngDataUrl, downloadFile } from "@/lib/qr/generator";
-import { buildTrackedMenuUrl } from "@/lib/analytics/urls";
 import { PrintableStandModal } from "@/components/qr-studio/PrintableStandModal";
 
 // Brand Color Palette Presets
@@ -48,7 +44,6 @@ const CTA_PRESETS = [
 export default function QrStudioPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   // Restaurant & Settings State
@@ -96,14 +91,6 @@ export default function QrStudioPage() {
   // Universal QR Code URL (Instant 302 Bridge to clean /)
   const currentQrTrackedUrl = useMemo(() => {
     return `${subdomainBaseUrl}/qr`;
-  }, [subdomainBaseUrl]);
-
-  // Share link (with ?src=share attribution)
-  const shareTrackedUrl = useMemo(() => {
-    return buildTrackedMenuUrl({
-      baseUrl: subdomainBaseUrl,
-      source: "share",
-    });
   }, [subdomainBaseUrl]);
 
   // Fetch initial data
@@ -234,18 +221,6 @@ export default function QrStudioPage() {
       showToast("Vector SVG downloaded!");
     } catch (e) {
       showToast("Failed to download SVG", "error");
-    }
-  };
-
-  // Copy share link
-  const handleCopyShareLink = async () => {
-    try {
-      await navigator.clipboard.writeText(shareTrackedUrl);
-      setCopiedLink(true);
-      showToast("Share link copied with attribution tracking (?src=share)");
-      setTimeout(() => setCopiedLink(false), 2500);
-    } catch {
-      showToast("Failed to copy link", "error");
     }
   };
 
@@ -817,54 +792,6 @@ export default function QrStudioPage() {
                   )}
                 </div>
               )}
-            </div>
-          </div>
-
-          {/* Direct Tracked Links Box */}
-          <div className="bg-white rounded-2xl border border-gray-200/80 p-4 space-y-3 shadow-2xs">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-gray-900">Attributed Links</span>
-              <a
-                href={currentQrTrackedUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-amber-600 hover:text-amber-700 font-bold flex items-center gap-1"
-              >
-                <span>Test Scan</span>
-                <ExternalLink size={12} />
-              </a>
-            </div>
-
-            {/* QR Encoded URL */}
-            <div className="p-2.5 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-between gap-2 text-xs">
-              <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-bold text-gray-400 block uppercase">
-                  Encoded in QR Code (Table Scan)
-                </span>
-                <span className="text-gray-700 font-mono text-[11px] truncate block">
-                  {currentQrTrackedUrl}
-                </span>
-              </div>
-            </div>
-
-            {/* Share Link */}
-            <div className="p-2.5 bg-blue-50/40 rounded-xl border border-blue-100 flex items-center justify-between gap-2 text-xs">
-              <div className="min-w-0 flex-1">
-                <span className="text-[10px] font-bold text-blue-500 block uppercase">
-                  Share Link (?src=share)
-                </span>
-                <span className="text-blue-950 font-mono text-[11px] truncate block">
-                  {shareTrackedUrl}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={handleCopyShareLink}
-                className="p-2 rounded-lg bg-white border border-blue-200 text-blue-700 hover:bg-blue-50 transition cursor-pointer shrink-0"
-                title="Copy share link"
-              >
-                {copiedLink ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-              </button>
             </div>
           </div>
         </div>

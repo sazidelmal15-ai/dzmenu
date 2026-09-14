@@ -12,14 +12,15 @@ import { DEFAULT_QR_SETTINGS, QrStudioSettingsSchema } from "@/types/qr-studio";
 
 /**
  * Server-side deduplication window in minutes.
- * Consecutive requests with same (restaurant_id, session_id, source) within this window
+ * Consecutive requests with same (restaurant_id, session_id) within this window
  * are considered duplicate heartbeats/reloads and ignored.
  */
 const DEDUPLICATION_WINDOW_MINUTES = 30;
 
 export const analyticsQueries = {
   /**
-   * Ingests a menu visit event with robust server-side deduplication.
+   * Ingests a menu visit event with robust, atomic server-side deduplication.
+   * Deduplicates by (restaurant_id, session_id) over the 30-minute window regardless of source changes.
    */
   async recordMenuVisit(params: {
     restaurantId: string;
@@ -31,25 +32,17 @@ export const analyticsQueries = {
     const db = getDb();
     const cleanTable = params.tableNumber?.trim() || null;
 
-    // 1. Server-side Deduplication check
-    const recentVisit = await db.queryOne<{ id: string }>(
-      `SELECT id FROM menu_visits 
-       WHERE restaurant_id = $1 
-         AND session_id = $2 
-         AND source = $3
-         AND created_at >= NOW() - INTERVAL '${DEDUPLICATION_WINDOW_MINUTES} minutes'
-       LIMIT 1`,
-      [params.restaurantId, params.sessionId, params.source]
-    );
-
-    if (recentVisit) {
-      return { recorded: false, reason: "deduplicated_window" };
-    }
-
-    // 2. Insert new verified visit
-    await db.queryOne(
+    // Single atomic statement: checks 30-minute deduplication window and inserts in 1 round-trip
+    // Fully compatible with Supabase PgBouncer transaction pooling
+    const inserted = await db.queryOne<{ id: string }>(
       `INSERT INTO menu_visits (restaurant_id, source, table_number, session_id, device_type, created_at)
-       VALUES ($1, $2, $3, $4, $5, NOW())
+       SELECT $1::uuid, $2::varchar, $3::varchar, $4::varchar, $5::varchar, NOW()
+       WHERE NOT EXISTS (
+         SELECT 1 FROM menu_visits
+         WHERE restaurant_id = $1::uuid
+           AND session_id = $4::varchar
+           AND created_at >= NOW() - INTERVAL '${DEDUPLICATION_WINDOW_MINUTES} minutes'
+       )
        RETURNING id`,
       [
         params.restaurantId,
@@ -59,6 +52,10 @@ export const analyticsQueries = {
         params.deviceType,
       ]
     );
+
+    if (!inserted) {
+      return { recorded: false, reason: "deduplicated_window" };
+    }
 
     return { recorded: true };
   },

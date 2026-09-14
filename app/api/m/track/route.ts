@@ -1,16 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { TrackVisitPayloadSchema } from "@/types/analytics";
 import { restaurantQueries, analyticsQueries } from "@/lib/db/queries";
+import { hasActiveSubscription } from "@/lib/permissions/guards";
+import { checkRateLimit } from "@/lib/security/rate-limiter";
 
 export const dynamic = "force-dynamic";
 
 /**
  * POST /api/m/track
- * Ingests customer menu visit events with Zod validation and server-side deduplication.
+ * Ingests customer menu visit events with Zod validation, IP rate limiting,
+ * subscription verification, and server-side deduplication.
  * Lightweight, fast, non-blocking.
  */
 export async function POST(request: NextRequest) {
   try {
+    // 1. IP Rate Limiting (Abuse prevention: 30 requests / 60 seconds per client IP)
+    const clientIp =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      "127.0.0.1";
+
+    const rateLimit = checkRateLimit(clientIp, { limit: 30, windowMs: 60_000 });
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: "Too many tracking requests", retryAfterMs: rateLimit.resetMs },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": Math.ceil(rateLimit.resetMs / 1000).toString(),
+            "X-RateLimit-Limit": rateLimit.limit.toString(),
+            "X-RateLimit-Remaining": "0",
+          },
+        }
+      );
+    }
+
     const rawBody = await request.json();
     const parsed = TrackVisitPayloadSchema.safeParse(rawBody);
 
@@ -23,13 +47,23 @@ export async function POST(request: NextRequest) {
 
     const { restaurantSlug, source: claimedSource, tableNumber, sessionId, deviceType, referrer } = parsed.data;
 
-    // 1. Resolve restaurant by public slug
+    // 2. Resolve restaurant by public slug
     const restaurant = await restaurantQueries.findBySlug(restaurantSlug);
     if (!restaurant) {
       return NextResponse.json({ error: "Restaurant not found" }, { status: 404 });
     }
 
-    // 2. Intelligent Referrer Attribution:
+    // 3. Verify restaurant active status and subscription
+    const isSubscribed = await hasActiveSubscription(restaurant.id);
+    if (restaurant.status !== "ACTIVE" || !isSubscribed) {
+      return NextResponse.json({
+        success: true,
+        recorded: false,
+        reason: "inactive_restaurant",
+      });
+    }
+
+    // 4. Intelligent Referrer Attribution:
     // If the request claimed ?src=qr but arrived from a chat or social media referrer (WhatsApp, Instagram, Telegram, etc.),
     // re-attribute it accurately as 'share' since it was clicked inside a messaging app rather than scanned by a camera.
     let effectiveSource = claimedSource;
@@ -56,7 +90,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 3. Record visit with server deduplication window check
+    // 5. Record visit with server deduplication window check
     const result = await analyticsQueries.recordMenuVisit({
       restaurantId: restaurant.id,
       source: effectiveSource,
@@ -79,3 +113,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
