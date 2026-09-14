@@ -7,3 +7,4 @@ export * from "./EmptyState";
 export * from "./ErrorState";
 export * from "./LoadingSkeleton";
 export * from "./MissionControlShell";
+export * from "./QuickSearchModal";

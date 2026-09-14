@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { LayoutDashboard, Store, ShieldAlert } from "lucide-react";
 
 interface MissionControlNavProps {
@@ -15,8 +15,6 @@ export function MissionControlNav({
   auditCount,
 }: MissionControlNavProps) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const currentTab = searchParams.get("tab") || "overview";
 
   const tabs = [
     {
@@ -24,23 +22,23 @@ export function MissionControlNav({
       label: "Overview",
       href: "/admin",
       icon: <LayoutDashboard className="h-4 w-4" />,
-      isActive: pathname === "/admin" && currentTab === "overview",
+      isActive: pathname === "/admin",
     },
     {
       id: "restaurants",
       label: "Restaurants",
-      href: "/admin?tab=restaurants",
+      href: "/admin/restaurants",
       icon: <Store className="h-4 w-4" />,
       count: totalRestaurants,
-      isActive: currentTab === "restaurants" || pathname.startsWith("/admin/restaurants"),
+      isActive: pathname.startsWith("/admin/restaurants"),
     },
     {
       id: "audit",
       label: "Audit Log",
-      href: "/admin?tab=audit",
+      href: "/admin/audit",
       icon: <ShieldAlert className="h-4 w-4" />,
       count: auditCount,
-      isActive: currentTab === "audit" || pathname.startsWith("/admin/audit"),
+      isActive: pathname.startsWith("/admin/audit"),
     },
   ];
 
