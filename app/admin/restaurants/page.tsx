@@ -1,18 +1,60 @@
 import React from "react";
-import { restaurantQueries, auditLogQueries } from "@/lib/db/queries";
-import { SearchFilterFoundation } from "@/components/admin";
-import { Store, Layers } from "lucide-react";
+import { restaurantQueries } from "@/lib/db/queries";
+import {
+  RestaurantTable,
+  RestaurantTableToolbar,
+  TablePagination,
+} from "@/components/admin";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminRestaurantsPage() {
-  const [stats, auditCount] = await Promise.all([
+interface AdminRestaurantsPageProps {
+  searchParams: Promise<{
+    q?: string;
+    status?: string;
+    plan?: string;
+    sort?: string;
+    order?: string;
+    page?: string;
+    pageSize?: string;
+  }>;
+}
+
+export default async function AdminRestaurantsPage({
+  searchParams,
+}: AdminRestaurantsPageProps) {
+  const params = await searchParams;
+  const q = typeof params.q === "string" ? params.q : undefined;
+  const status = typeof params.status === "string" ? params.status : undefined;
+  const plan = typeof params.plan === "string" ? params.plan : undefined;
+  const sort = typeof params.sort === "string" ? (params.sort as "name" | "created" | "expiry" | "status") : undefined;
+  const order = typeof params.order === "string" ? (params.order as "asc" | "desc") : undefined;
+  const page = typeof params.page === "string" ? parseInt(params.page, 10) : 1;
+  const pageSize = typeof params.pageSize === "string" ? parseInt(params.pageSize, 10) : 10;
+
+  const [stats, listResult] = await Promise.all([
     restaurantQueries.getPlatformKpiStats(),
-    auditLogQueries.count(),
+    restaurantQueries.getPaginatedForAdmin({
+      search: q,
+      status,
+      plan,
+      sortBy: sort,
+      sortOrder: order,
+      page,
+      pageSize,
+    }),
   ]);
 
+  const isFiltered = Boolean(
+    q ||
+      (status && status.toUpperCase() !== "ALL") ||
+      (plan && plan.toUpperCase() !== "ALL") ||
+      sort ||
+      order
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-5">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-zinc-200/60">
         <div>
@@ -31,27 +73,28 @@ export default async function AdminRestaurantsPage() {
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <section aria-label="Tenant Search and Filter Bar">
-        <SearchFilterFoundation stats={stats} auditCount={auditCount} />
+      {/* Interactive Toolbar: Search, Filters, Sorters */}
+      <section aria-label="Tenant directory controls">
+        <RestaurantTableToolbar stats={stats} totalFiltered={listResult.total} />
       </section>
 
-      {/* Phase 4 Smart Table Shell Placeholder */}
-      <div className="bg-white border border-zinc-200/80 rounded-xl p-8 sm:p-12 text-center shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex flex-col items-center justify-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-100 border border-zinc-200 text-zinc-600 mb-3.5">
-          <Store className="h-6 w-6" />
-        </div>
-        <h3 className="text-base font-semibold text-zinc-900 tracking-tight">
-          Restaurants Smart Table & Directory
-        </h3>
-        <p className="mt-1.5 text-xs sm:text-sm text-zinc-500 max-w-md leading-relaxed">
-          The full interactive table with real-time fuzzy search, multi-column sorting, plan indicators, and quick lifecycle actions will be implemented in <span className="font-semibold text-zinc-800">Phase 4</span>.
-        </p>
-        <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-md bg-zinc-50 border border-zinc-200 text-xs font-mono text-zinc-600">
-          <Layers className="h-3.5 w-3.5 text-zinc-400" />
-          <span>Route: /admin/restaurants</span>
-        </div>
-      </div>
+      {/* Smart Table */}
+      <section aria-label="Tenant restaurants table">
+        <RestaurantTable
+          restaurants={listResult.items}
+          isFiltered={isFiltered}
+        />
+      </section>
+
+      {/* Pagination Bar */}
+      <section aria-label="Table pagination">
+        <TablePagination
+          page={listResult.page}
+          pageSize={listResult.pageSize}
+          total={listResult.total}
+          totalPages={listResult.totalPages}
+        />
+      </section>
     </div>
   );
 }

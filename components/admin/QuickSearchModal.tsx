@@ -2,7 +2,8 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Search, X, Store, ShieldAlert, LayoutDashboard, ArrowRight, CornerDownLeft } from "lucide-react";
+import { Search, X, Store, ShieldAlert, LayoutDashboard, CornerDownLeft } from "lucide-react";
+
 
 interface QuickSearchModalProps {
   isOpen: boolean;

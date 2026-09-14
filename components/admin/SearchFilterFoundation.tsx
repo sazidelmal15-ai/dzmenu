@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, X } from "lucide-react";
+
 import type { PlatformKpiStats } from "@/lib/db/queries";
 import { QuickSearchModal } from "./QuickSearchModal";
 

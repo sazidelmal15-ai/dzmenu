@@ -24,6 +24,41 @@ export interface PlatformKpiStats {
   suspendedCount: number;
 }
 
+export type AdminEffectiveStatus = "ACTIVE" | "TRIAL" | "EXPIRED" | "SUSPENDED";
+
+export interface AdminRestaurantRow {
+  id: string;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  restaurantStatus: string;
+  ownerEmail: string | null;
+  ownerName: string | null;
+  subscriptionStatus: SubscriptionStatus | null;
+  subscriptionPlan: SubscriptionPlan | null;
+  subscriptionExpiresAt: Date | null;
+  effectiveStatus: AdminEffectiveStatus;
+  createdAt: Date;
+}
+
+export interface AdminRestaurantListOptions {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  status?: string;
+  plan?: string;
+  sortBy?: "name" | "created" | "expiry" | "status";
+  sortOrder?: "asc" | "desc";
+}
+
+export interface AdminRestaurantListResult {
+  items: AdminRestaurantRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
 /**
  * Standard Restaurant SELECT columns mapping snake_case DB columns to camelCase domain model.
  */
@@ -302,12 +337,169 @@ export const restaurantQueries = {
               s.current_period_end AS "subscriptionExpiresAt",
               r.created_at AS "createdAt"
        FROM restaurants r
-       LEFT JOIN restaurant_members rm ON rm.restaurant_id = r.id AND rm.role = 'RESTAURANT_OWNER'
+       LEFT JOIN (
+         SELECT DISTINCT ON (restaurant_id) restaurant_id, user_id
+         FROM restaurant_members
+         WHERE role = 'RESTAURANT_OWNER'
+         ORDER BY restaurant_id, created_at ASC
+       ) rm ON rm.restaurant_id = r.id
        LEFT JOIN users u ON u.id = rm.user_id
        LEFT JOIN subscriptions s ON s.restaurant_id = r.id
        WHERE r.deleted_at IS NULL
        ORDER BY r.created_at DESC`
     );
+  },
+
+  /**
+   * High-performance, parameterized paginated query for the Phase 4 Restaurants Smart Table.
+   * Supports server-side search, status & plan filtering, safe allowlist sorting, and windowed total count.
+   */
+  async getPaginatedForAdmin(
+    options: AdminRestaurantListOptions = {},
+    dbOrTx?: DatabaseAdapter
+  ): Promise<AdminRestaurantListResult> {
+    const db = dbOrTx || getDb();
+
+    // 1. Pagination Sanitization (Strict allowlist & clamping)
+    const allowedPageSizes = [10, 25, 50];
+    const rawPageSize = Number(options.pageSize) || 10;
+    const pageSize = allowedPageSizes.includes(rawPageSize) ? rawPageSize : 10;
+    const rawPage = Number(options.page) || 1;
+    const page = Math.max(1, Math.floor(rawPage));
+    const offset = (page - 1) * pageSize;
+
+    // 2. Query Parameters & WHERE Clauses
+    const whereClauses: string[] = ["r.deleted_at IS NULL"];
+    const params: unknown[] = [];
+
+    // Search: case-insensitive match across name, slug, owner email, owner name
+    if (options.search && options.search.trim()) {
+      const sanitizedSearch = `%${options.search.trim().toLowerCase()}%`;
+      params.push(sanitizedSearch);
+      const pIdx = params.length;
+      whereClauses.push(
+        `(LOWER(r.name) LIKE $${pIdx} OR LOWER(r.slug) LIKE $${pIdx} OR LOWER(COALESCE(u.email, '')) LIKE $${pIdx} OR LOWER(COALESCE(u.full_name, '')) LIKE $${pIdx})`
+      );
+    }
+
+    // Status Filter: Semantic lifecycle filter
+    if (options.status && options.status.trim().toUpperCase() !== "ALL") {
+      const statusNorm = options.status.trim().toUpperCase();
+      if (statusNorm === "SUSPENDED") {
+        whereClauses.push(`(r.status = 'SUSPENDED' OR s.status = 'SUSPENDED')`);
+      } else if (statusNorm === "ACTIVE") {
+        whereClauses.push(`(s.status = 'ACTIVE' AND s.current_period_end > NOW() AND r.status != 'SUSPENDED')`);
+      } else if (statusNorm === "TRIAL" || statusNorm === "TRIALING") {
+        whereClauses.push(`((s.status = 'TRIALING' OR s.status = 'TRIAL') AND s.current_period_end > NOW() AND r.status != 'SUSPENDED')`);
+      } else if (statusNorm === "EXPIRED") {
+        whereClauses.push(`((s.current_period_end <= NOW() OR s.status = 'EXPIRED' OR s.status = 'INACTIVE' OR s.status IS NULL) AND r.status != 'SUSPENDED')`);
+      }
+    }
+
+    // Plan Filter: Plan identifier filter
+    if (options.plan && options.plan.trim().toUpperCase() !== "ALL") {
+      const planNorm = options.plan.trim().toUpperCase();
+      params.push(planNorm);
+      const pIdx = params.length;
+      whereClauses.push(`(UPPER(COALESCE(s.plan, '')) = $${pIdx} OR UPPER(COALESCE(s.plan, '')) LIKE $${pIdx} || '_%')`);
+    }
+
+    // 3. Sorting (Strict Server-Side Allowlist)
+    let orderExpression = "r.created_at";
+    const sortKey = options.sortBy || "created";
+    const sortDirection = options.sortOrder?.toLowerCase() === "asc" ? "ASC" : "DESC";
+
+    switch (sortKey) {
+      case "name":
+        orderExpression = "r.name";
+        break;
+      case "expiry":
+        orderExpression = "COALESCE(s.current_period_end, '1970-01-01'::timestamptz)";
+        break;
+      case "status":
+        orderExpression = `CASE 
+          WHEN r.status = 'SUSPENDED' OR s.status = 'SUSPENDED' THEN 4
+          WHEN (s.current_period_end <= NOW() OR s.status = 'EXPIRED' OR s.status = 'INACTIVE' OR s.status IS NULL) THEN 3
+          WHEN (s.status = 'TRIALING' OR s.status = 'TRIAL') THEN 2
+          ELSE 1 
+        END`;
+        break;
+      case "created":
+      default:
+        orderExpression = "r.created_at";
+        break;
+    }
+
+    // Append limit & offset as parameterized inputs
+    params.push(pageSize);
+    const limitIdx = params.length;
+    params.push(offset);
+    const offsetIdx = params.length;
+
+    const sqlQuery = `
+      SELECT 
+        r.id,
+        r.name,
+        r.slug,
+        r.logo_url AS "logoUrl",
+        r.status AS "restaurantStatus",
+        u.email AS "ownerEmail",
+        u.full_name AS "ownerName",
+        s.status AS "subscriptionStatus",
+        s.plan AS "subscriptionPlan",
+        s.current_period_end AS "subscriptionExpiresAt",
+        r.created_at AS "createdAt",
+        CASE
+          WHEN r.status = 'SUSPENDED' OR s.status = 'SUSPENDED' THEN 'SUSPENDED'
+          WHEN (s.status = 'TRIALING' OR s.status = 'TRIAL') AND s.current_period_end > NOW() THEN 'TRIAL'
+          WHEN s.status = 'ACTIVE' AND s.current_period_end > NOW() THEN 'ACTIVE'
+          ELSE 'EXPIRED'
+        END AS "effectiveStatus",
+        COUNT(*) OVER() AS "fullCount"
+      FROM restaurants r
+      LEFT JOIN (
+        SELECT DISTINCT ON (restaurant_id) restaurant_id, user_id
+        FROM restaurant_members
+        WHERE role = 'RESTAURANT_OWNER'
+        ORDER BY restaurant_id, created_at ASC
+      ) rm ON rm.restaurant_id = r.id
+      LEFT JOIN users u ON u.id = rm.user_id
+      LEFT JOIN subscriptions s ON s.restaurant_id = r.id
+      WHERE ${whereClauses.join(" AND ")}
+      ORDER BY ${orderExpression} ${sortDirection}, r.id ASC
+      LIMIT $${limitIdx} OFFSET $${offsetIdx}
+    `;
+
+    interface RawAdminRow extends AdminRestaurantRow {
+      fullCount: string | number;
+    }
+
+    const rows = await db.query<RawAdminRow>(sqlQuery, params);
+    const total = rows.length > 0 ? Number(rows[0].fullCount) : 0;
+    const totalPages = Math.ceil(total / pageSize);
+
+    const items: AdminRestaurantRow[] = rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      slug: r.slug,
+      logoUrl: r.logoUrl,
+      restaurantStatus: r.restaurantStatus,
+      ownerEmail: r.ownerEmail,
+      ownerName: r.ownerName,
+      subscriptionStatus: r.subscriptionStatus,
+      subscriptionPlan: r.subscriptionPlan,
+      subscriptionExpiresAt: r.subscriptionExpiresAt ? new Date(r.subscriptionExpiresAt) : null,
+      effectiveStatus: r.effectiveStatus as AdminEffectiveStatus,
+      createdAt: new Date(r.createdAt),
+    }));
+
+    return {
+      items,
+      total,
+      page,
+      pageSize,
+      totalPages,
+    };
   },
 
   /**
@@ -342,3 +534,4 @@ export const restaurantQueries = {
     };
   },
 };
+
