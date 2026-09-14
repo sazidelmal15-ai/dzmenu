@@ -10,12 +10,13 @@ export async function generateQrSvg(
   settings: QrStudioSettings,
   logoUrl?: string | null
 ): Promise<string> {
-  const rawSvg = await QRCode.toString(content, {
+  const hasLogo = Boolean(settings.logoEnabled && logoUrl);
+  const rawSvg = await QRCode.toString(content.trim(), {
     type: "svg",
-    margin: 1.5,
-    errorCorrectionLevel: "H", // High error correction permits up to 30% center logo occlusion
+    margin: 3,
+    errorCorrectionLevel: hasLogo ? "H" : "M", // High when logo occlusion present, Medium for clean rapid URL detection
     color: {
-      dark: settings.foregroundColor || "#18181B",
+      dark: settings.foregroundColor || "#000000",
       light: settings.backgroundColor || "#FFFFFF",
     },
   });
@@ -52,14 +53,16 @@ export async function generateQrPngDataUrl(
   logoUrl?: string | null,
   size: number = 2048
 ): Promise<string> {
+  const hasLogo = Boolean(settings.logoEnabled && logoUrl);
+
   if (typeof window === "undefined") {
     // Server-side fallback via QRCode library
-    return QRCode.toDataURL(content, {
+    return QRCode.toDataURL(content.trim(), {
       width: size,
-      margin: 1.5,
-      errorCorrectionLevel: "H",
+      margin: 3,
+      errorCorrectionLevel: hasLogo ? "H" : "M",
       color: {
-        dark: settings.foregroundColor || "#18181B",
+        dark: settings.foregroundColor || "#000000",
         light: settings.backgroundColor || "#FFFFFF",
       },
     });
@@ -69,12 +72,12 @@ export async function generateQrPngDataUrl(
   canvas.width = size;
   canvas.height = size;
 
-  await QRCode.toCanvas(canvas, content, {
+  await QRCode.toCanvas(canvas, content.trim(), {
     width: size,
-    margin: 1.5,
-    errorCorrectionLevel: "H",
+    margin: 3,
+    errorCorrectionLevel: hasLogo ? "H" : "M",
     color: {
-      dark: settings.foregroundColor || "#18181B",
+      dark: settings.foregroundColor || "#000000",
       light: settings.backgroundColor || "#FFFFFF",
     },
   });
