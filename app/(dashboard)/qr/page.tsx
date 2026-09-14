@@ -68,18 +68,10 @@ export default function QrStudioPage() {
     setTimeout(() => setToast(null), 3500);
   };
 
-  // Base URL calculation (Subdomain vs Localhost)
+  // Base URL calculation - Always generates the public canonical HTTPS domain for real mobile QR scanning
   const subdomainBaseUrl = useMemo(() => {
-    if (typeof window === "undefined") return "http://localhost:3000";
-    const host = window.location.host;
-    const protocol = window.location.protocol;
-
-    if (host.includes("localhost")) {
-      return `${protocol}//${restaurant.slug}.localhost:3000`;
-    }
-    // Production custom domain or subdomain
     const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || "softscape.xyz";
-    return `${protocol}//${restaurant.slug}.${rootDomain}`;
+    return `https://${restaurant.slug}.${rootDomain}`;
   }, [restaurant.slug]);
 
   // Universal QR Code URL (Instant 302 Bridge to clean /)
