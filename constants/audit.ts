@@ -137,3 +137,11 @@ export function getAuditActionBadgeStyle(action: string): { bg: string; text: st
 export function getAllAuditActionDefinitions(): AuditActionDefinition[] {
   return Object.values(AUDIT_ACTION_REGISTRY);
 }
+
+/**
+ * Resolves full action definition for a given action.
+ */
+export function getAuditActionDefinition(action: string): AuditActionDefinition | undefined {
+  return AUDIT_ACTION_REGISTRY[action as AdminAuditAction];
+}
+

@@ -157,13 +157,13 @@ async function runPhase6BVerificationSuite() {
     throw new Error("TEST 11 Failed: AuditTableSkeleton missing or invalid.");
   }
 
-  // --- TEST 12: Scope Protection (No Phase 6C Detail Drawer or Analytics Leak) ---
-  console.log("\n--- TEST 12: Scope Protection Check (No Phase 6C / Phase 7 Leak) ---");
-  const hasAuditDetailDrawer = fs.existsSync('components/admin/audit/AuditDetailDrawer.tsx');
+  // --- TEST 12: Scope Protection (No Phase 6D Cross-Nav or Phase 7 Analytics Leak) ---
+  console.log("\n--- TEST 12: Scope Protection Check (No Phase 6D / Phase 7 Leak) ---");
+  const hasPhase7 = fs.existsSync('components/admin/security') || fs.existsSync('components/admin/analytics');
   const hasCharts = pageContent.includes('Chart') || pageContent.includes('Analytics');
 
-  if (!hasAuditDetailDrawer && !hasCharts) {
-    console.log("✅ PASS: Phase 6B scope strictly guarded (Phase 6C Detail Drawer not mounted; no analytics/chart leak).");
+  if (!hasPhase7 && !hasCharts) {
+    console.log("✅ PASS: Explorer UI scope strictly guarded (no Phase 6D cross-navigation or Phase 7 analytics leak).");
     passedTests++;
   } else {
     throw new Error("TEST 12 Failed: Out of scope components detected in Phase 6B.");

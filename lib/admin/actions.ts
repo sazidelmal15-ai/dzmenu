@@ -5,7 +5,9 @@ import { ROUTES } from "@/constants/routes";
 import { requireRole } from "@/lib/permissions/guards";
 import { PLATFORM_ADMIN_ROLES } from "@/constants/roles";
 import { restaurantQueries, auditLogQueries, type AdminRestaurantDetail } from "@/lib/db/queries";
-import type { AdminAuditLog } from "@/types/audit";
+import type { AdminAuditLog, AuditDiffSummary } from "@/types/audit";
+import { computeStateDiff } from "@/lib/utils/audit-diff";
+import { redactSensitiveMetadata } from "@/lib/utils/audit-redact";
 import { adminLifecycleService } from "./lifecycle-service";
 import type { LifecycleActionResult } from "./lifecycle-service";
 
@@ -13,6 +15,12 @@ export interface ActionResult<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
+}
+
+export interface AuditDetailData {
+  log: AdminAuditLog;
+  diff: AuditDiffSummary;
+  redactedMetadata: Record<string, unknown> | null;
 }
 
 function getErrorMessage(err: unknown, fallback: string): string {
@@ -56,6 +64,50 @@ export async function getRestaurantDrawerDataAction(
   } catch (err: unknown) {
     console.error("getRestaurantDrawerDataAction error:", err);
     return { success: false, error: getErrorMessage(err, "Failed to load restaurant details") };
+  }
+}
+
+/**
+ * Server action to securely retrieve complete audit event details, compute state diff,
+ * and sanitize metadata for the Phase 6C Global Audit Detail Drawer.
+ */
+export async function getAuditDetailAction(
+  auditId: string
+): Promise<ActionResult<AuditDetailData>> {
+  try {
+    // 1. Enforce platform admin role guard (SUPER_OWNER, SUPPORT_LEAD)
+    await requireRole(PLATFORM_ADMIN_ROLES);
+
+    if (!auditId || typeof auditId !== "string" || !auditId.trim()) {
+      return { success: false, error: "Valid audit event ID is required" };
+    }
+
+    // 2. Query real audit event by ID with full projection
+    const log = await auditLogQueries.getDetailById(auditId.trim());
+
+    if (!log) {
+      return { success: false, error: "Audit event record not found" };
+    }
+
+    // 3. Compute structured before/after state diff using canonical utility
+    const diff = computeStateDiff(log.previousState, log.newState);
+
+    // 4. Recursively sanitize metadata using redaction utility
+    const redactedMetadata = log.metadata
+      ? (redactSensitiveMetadata(log.metadata) as Record<string, unknown>)
+      : null;
+
+    return {
+      success: true,
+      data: {
+        log,
+        diff,
+        redactedMetadata,
+      },
+    };
+  } catch (err: unknown) {
+    console.error("getAuditDetailAction error:", err);
+    return { success: false, error: getErrorMessage(err, "Unable to load audit event") };
   }
 }
 

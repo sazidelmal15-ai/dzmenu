@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import type { AdminAuditListRow } from "@/types/audit";
 import { getAuditActionLabel, getAuditActionBadgeStyle } from "@/constants/audit";
+import { AuditDetailDrawer } from "./AuditDetailDrawer";
 
 interface AuditTableProps {
   logs: AdminAuditListRow[];
@@ -75,6 +76,24 @@ export function AuditTable({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+
+  // Internal drawer selection state
+  const [internalSelectedAuditId, setInternalSelectedAuditId] = React.useState<string | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
+
+  const activeSelectedAuditId =
+    selectedAuditId !== undefined ? selectedAuditId : internalSelectedAuditId;
+
+  const handleRowClick = (log: AdminAuditListRow) => {
+    setInternalSelectedAuditId(log.id);
+    setIsDrawerOpen(true);
+    onSelectAudit?.(log);
+  };
+
+  const handleCloseDrawer = () => {
+    setIsDrawerOpen(false);
+    setInternalSelectedAuditId(null);
+  };
 
   const currentSort = searchParams.get("sort") || "time";
   const currentOrder = searchParams.get("order")?.toLowerCase() || "desc";
@@ -230,17 +249,17 @@ export function AuditTable({
             {logs.map((log) => {
               const label = getAuditActionLabel(log.action);
               const badgeStyle = getAuditActionBadgeStyle(log.action);
-              const isSelected = selectedAuditId === log.id;
+              const isSelected = activeSelectedAuditId === log.id;
 
               return (
                 <tr
                   key={log.id}
-                  onClick={() => onSelectAudit?.(log)}
+                  onClick={() => handleRowClick(log)}
                   tabIndex={0}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      onSelectAudit?.(log);
+                      handleRowClick(log);
                     }
                   }}
                   className={`transition-colors cursor-pointer group focus:outline-none focus:bg-zinc-50 ${
@@ -314,6 +333,13 @@ export function AuditTable({
           </tbody>
         </table>
       </div>
+
+      {/* Phase 6C Audit Detail Drawer */}
+      <AuditDetailDrawer
+        auditId={activeSelectedAuditId}
+        isOpen={isDrawerOpen}
+        onClose={handleCloseDrawer}
+      />
     </div>
   );
 }
