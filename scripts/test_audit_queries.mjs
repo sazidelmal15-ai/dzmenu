@@ -8,12 +8,42 @@ if (fs.existsSync('.env.local')) {
   process.loadEnvFile('.env');
 }
 
-const client = new Client({ connectionString: process.env.DATABASE_URL });
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  console.error("Error: DATABASE_URL environment variable is required.");
+  process.exit(1);
+}
 
-async function testAuditQueries() {
+const urlsToTry = [
+  connectionString.replace(":6543", ":5432"),
+  connectionString,
+  connectionString.replace("aws-1-eu-west-1.pooler.supabase.com:6543", "aws-1-eu-west-1.pooler.supabase.com:5432")
+];
+
+async function runTest() {
+  let client = null;
+  for (const url of urlsToTry) {
+    const cleanUrl = url.replace(/[\?&]sslmode=[^&]+/g, "").replace(/\?$/, "");
+    try {
+      client = new Client({
+        connectionString: cleanUrl,
+        ssl: { rejectUnauthorized: false },
+        connectionTimeoutMillis: 10000,
+      });
+      await client.connect();
+      break;
+    } catch (e) {
+      client = null;
+    }
+  }
+
+  if (!client) {
+    console.error("Could not connect to database");
+    process.exit(1);
+  }
+
   try {
-    await client.connect();
-    console.log("Testing Audit Log Insert and Fetch...");
+    console.log("Connected to database. Testing Audit Log Retention...");
 
     // 1. Fetch a restaurant
     const restRes = await client.query(`SELECT id, name FROM restaurants LIMIT 1`);
@@ -27,7 +57,7 @@ async function testAuditQueries() {
     const userRes = await client.query(`SELECT id, email FROM users WHERE role = 'SUPER_OWNER' LIMIT 1`);
     const adminUser = userRes.rows[0] || { id: null, email: 'admin@dzmenu.local' };
 
-    // 3. Insert a structured test audit record
+    // 3. Insert a structured test audit record with target_restaurant_id
     const insertRes = await client.query(`
       INSERT INTO admin_audit_logs (
         actor_id, actor_email, action,
@@ -35,7 +65,7 @@ async function testAuditQueries() {
         previous_state, new_state, reason, metadata, created_at
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()
-      ) RETURNING id, action, target_restaurant_name, created_at
+      ) RETURNING id, action, target_restaurant_id, target_restaurant_name, created_at
     `, [
       adminUser.id,
       adminUser.email,
@@ -49,22 +79,47 @@ async function testAuditQueries() {
     ]);
 
     const created = insertRes.rows[0];
-    console.log("✅ Inserted test audit record:", created);
+    console.log("✅ Inserted test audit record with restaurant link:", created);
 
-    // 4. Query it back
+    // 4. Test nullable target_restaurant_id (retention test when restaurant is deleted or unlinked)
+    const insertNullRest = await client.query(`
+      INSERT INTO admin_audit_logs (
+        actor_id, actor_email, action,
+        target_restaurant_id, target_restaurant_name,
+        previous_state, new_state, reason, metadata, created_at
+      ) VALUES (
+        $1, $2, $3, NULL, $4, $5, $6, $7, $8, NOW()
+      ) RETURNING id, action, target_restaurant_id, target_restaurant_name, created_at
+    `, [
+      adminUser.id,
+      adminUser.email,
+      'SUSPEND_RESTAURANT',
+      'Archived/Deleted Restaurant Name Intact',
+      JSON.stringify({ status: 'ACTIVE' }),
+      JSON.stringify({ status: 'SUSPENDED' }),
+      'Retention verification for deleted restaurant',
+      JSON.stringify({ retentionTest: true })
+    ]);
+
+    const createdNull = insertNullRest.rows[0];
+    console.log("✅ Inserted audit record with preserved name and NULL target_restaurant_id:", createdNull);
+
+    // 5. Query both records back
     const fetchRes = await client.query(`
-      SELECT id, actor_email, action, target_restaurant_name, previous_state, new_state, reason, created_at
+      SELECT id, actor_email, action, target_restaurant_id, target_restaurant_name, previous_state, new_state, reason, created_at
       FROM admin_audit_logs
-      WHERE id = $1
-    `, [created.id]);
+      WHERE id IN ($1, $2)
+      ORDER BY created_at DESC
+    `, [created.id, createdNull.id]);
 
-    console.log("✅ Fetched test audit record successfully:", fetchRes.rows[0]);
+    console.log("✅ Fetched test audit records successfully:");
+    console.table(fetchRes.rows);
 
-    // 5. Clean up test record
-    await client.query(`DELETE FROM admin_audit_logs WHERE id = $1`, [created.id]);
-    console.log("✅ Cleaned up test record.");
+    // 6. Clean up test records
+    await client.query(`DELETE FROM admin_audit_logs WHERE id IN ($1, $2)`, [created.id, createdNull.id]);
+    console.log("✅ Cleaned up test records.");
 
-    console.log("Phase 1 verification passed with 0 errors.");
+    console.log("All audit retention tests PASSED successfully.");
     process.exit(0);
   } catch (err) {
     console.error("Test failed:", err);
@@ -74,4 +129,4 @@ async function testAuditQueries() {
   }
 }
 
-testAuditQueries();
+runTest();

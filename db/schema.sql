@@ -602,7 +602,7 @@ CREATE TABLE IF NOT EXISTS admin_audit_logs (
     actor_id              UUID          NULL REFERENCES users(id) ON DELETE SET NULL,
     actor_email           VARCHAR(255)  NOT NULL,
     action                VARCHAR(100)  NOT NULL,
-    target_restaurant_id  UUID          NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+    target_restaurant_id  UUID          NULL REFERENCES restaurants(id) ON DELETE SET NULL,
     target_restaurant_name VARCHAR(255) NOT NULL,
     previous_state        JSONB         NULL,
     new_state             JSONB         NULL,

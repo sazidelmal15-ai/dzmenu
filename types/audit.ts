@@ -31,7 +31,7 @@ export interface AdminAuditLog {
   actorId: string | null;
   actorEmail: string;
   action: AdminAuditAction;
-  targetRestaurantId: string;
+  targetRestaurantId: string | null;
   targetRestaurantName: string;
   previousState: AdminAuditStateSnapshot | null;
   newState: AdminAuditStateSnapshot | null;
@@ -47,7 +47,7 @@ export interface CreateAdminAuditLogPayload {
   actorId: string | null;
   actorEmail: string;
   action: AdminAuditAction;
-  targetRestaurantId: string;
+  targetRestaurantId?: string | null;
   targetRestaurantName: string;
   previousState?: AdminAuditStateSnapshot | null;
   newState?: AdminAuditStateSnapshot | null;
