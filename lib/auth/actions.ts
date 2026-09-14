@@ -210,8 +210,11 @@ export async function logoutAction(): Promise<void> {
 
 /**
  * Admin action to activate or extend a restaurant's annual subscription (backward-compatible).
+ * Defense-in-depth: explicit role guard at action entry point + lifecycle service internal guard.
  */
 export async function activateSubscriptionAction(formData: FormData): Promise<void> {
+  await requireRole(PLATFORM_ADMIN_ROLES);
+
   const restaurantId = formData.get("restaurantId") as string;
   if (restaurantId) {
     const { adminLifecycleService } = await import("@/lib/admin/lifecycle-service");
