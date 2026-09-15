@@ -6,16 +6,14 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   // BarChart2, // Analytics — hidden for now, re-enable when ready
+  UtensilsCrossed,
+  Palette,
+  QrCode,
+  Store,
   HelpCircle,
   ChevronLeft,
   LogOut,
 } from "lucide-react";
-import {
-  StreamlineMenuSolid,
-  StreamlineThemesSolid,
-  StreamlineQRSolid,
-  StreamlineProfileSolid,
-} from "@/components/icons/StreamlineIcons";
 import { logoutAction } from "@/lib/auth/actions";
 import type { Restaurant } from "@/types/restaurant";
 import type { CurrentUser } from "@/types/auth";
@@ -40,25 +38,25 @@ export function Sidebar({ restaurant, user }: SidebarProps) {
     {
       label: "Menu",
       href: "/menu",
-      icon: StreamlineMenuSolid,
+      icon: UtensilsCrossed,
       active: pathname === "/menu" || pathname.startsWith("/menu"),
     },
     {
       label: "Themes & Design",
       href: "/themes",
-      icon: StreamlineThemesSolid,
+      icon: Palette,
       active: pathname === "/themes" || pathname.startsWith("/themes") || pathname.startsWith("/design"),
     },
     {
       label: "QR Code Studio",
       href: "/qr",
-      icon: StreamlineQRSolid,
+      icon: QrCode,
       active: pathname === "/qr" || pathname.startsWith("/qr"),
     },
     {
       label: "Restaurant Profile",
       href: "/profile",
-      icon: StreamlineProfileSolid,
+      icon: Store,
       active: pathname === "/profile" || pathname.startsWith("/profile"),
     },
   ];
@@ -110,7 +108,7 @@ export function Sidebar({ restaurant, user }: SidebarProps) {
             transition={{ type: "spring", stiffness: 500, damping: 25 }}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-white shadow-md shadow-amber-500/25 cursor-pointer"
           >
-            <StreamlineMenuSolid size={19} />
+            <UtensilsCrossed size={19} />
           </motion.div>
 
           <AnimatePresence mode="wait">
