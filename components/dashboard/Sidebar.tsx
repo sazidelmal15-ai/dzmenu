@@ -6,14 +6,16 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   // BarChart2, // Analytics — hidden for now, re-enable when ready
-  UtensilsCrossed,
-  Palette,
-  QrCode,
-  Store,
   HelpCircle,
   ChevronLeft,
   LogOut,
 } from "lucide-react";
+import {
+  StreamlineMenuSolid,
+  StreamlineThemesSolid,
+  StreamlineQRSolid,
+  StreamlineProfileSolid,
+} from "@/components/icons/StreamlineIcons";
 import { logoutAction } from "@/lib/auth/actions";
 import type { Restaurant } from "@/types/restaurant";
 import type { CurrentUser } from "@/types/auth";
@@ -38,25 +40,25 @@ export function Sidebar({ restaurant, user }: SidebarProps) {
     {
       label: "Menu",
       href: "/menu",
-      icon: UtensilsCrossed,
+      icon: StreamlineMenuSolid,
       active: pathname === "/menu" || pathname.startsWith("/menu"),
     },
     {
       label: "Themes & Design",
       href: "/themes",
-      icon: Palette,
+      icon: StreamlineThemesSolid,
       active: pathname === "/themes" || pathname.startsWith("/themes") || pathname.startsWith("/design"),
     },
     {
       label: "QR Code Studio",
       href: "/qr",
-      icon: QrCode,
+      icon: StreamlineQRSolid,
       active: pathname === "/qr" || pathname.startsWith("/qr"),
     },
     {
       label: "Restaurant Profile",
       href: "/profile",
-      icon: Store,
+      icon: StreamlineProfileSolid,
       active: pathname === "/profile" || pathname.startsWith("/profile"),
     },
   ];
