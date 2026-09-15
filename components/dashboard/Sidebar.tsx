@@ -110,7 +110,7 @@ export function Sidebar({ restaurant, user }: SidebarProps) {
             transition={{ type: "spring", stiffness: 500, damping: 25 }}
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-white shadow-md shadow-amber-500/25 cursor-pointer"
           >
-            <UtensilsCrossed size={19} />
+            <StreamlineMenuSolid size={19} />
           </motion.div>
 
           <AnimatePresence mode="wait">
