@@ -6,7 +6,8 @@ export interface StreamlineIconProps extends React.SVGProps<SVGSVGElement> {
 }
 
 /**
- * Streamline Core Solid: Menu / Restaurant Utensils & Plate
+ * Streamline Core Solid: Food & Kitchenware — Fork & Knife (Solid 48)
+ * Asset ID: streamlinehq-food-kitchenware-fork-knife-solid-48-ico_vzs1WTPF8yjpQdV4
  */
 export function StreamlineMenuSolid({
   size = 20,
@@ -17,19 +18,24 @@ export function StreamlineMenuSolid({
     <svg
       width={size}
       height={size}
-      viewBox="0 0 24 24"
+      viewBox="0 0 48 48"
       fill="currentColor"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       {...props}
     >
-      {/* Streamline Core Solid: Food Menu / Restaurant Book */}
+      {/* Streamline Solid: Fork (Left) */}
       <path
         fillRule="evenodd"
         clipRule="evenodd"
-        d="M4 3C2.89543 3 2 3.89543 2 5V19C2 20.1046 2.89543 21 4 21H18.5C19.8807 21 21 19.8807 21 18.5V17.5C21 16.1193 19.8807 15 18.5 15H18V5C18 3.89543 17.1046 3 16 3H4ZM6 6.5C6 5.94772 6.44772 5.5 7 5.5H13C13.5523 5.5 14 5.94772 14 6.5C14 7.05228 13.5523 7.5 13 7.5H7C6.44772 7.5 6 7.05228 6 6.5ZM7 9.5C6.44772 9.5 6 9.94772 6 10.5C6 11.0523 6.44772 11.5 7 11.5H13C13.5523 11.5 14 11.0523 14 10.5C14 9.94772 13.5523 9.5 13 9.5H7ZM18.5 17H18V19H18.5C18.7761 19 19 18.7761 19 18.5C19 18.2239 18.7761 18 18.5 17.75C18.5 17.75 18.5 17 18.5 17Z"
+        d="M7 5C7 3.89543 7.89543 3 9 3C10.1046 3 11 3.89543 11 5V14H13V5C13 3.89543 13.8954 3 15 3C16.1046 3 17 3.89543 17 5V14H19V5C19 3.89543 19.8954 3 21 3C22.1046 3 23 3.89543 23 5V15C23 18.866 19.866 22 16 22V42C16 43.6569 14.6569 45 13 45C11.3431 45 10 43.6569 10 42V22C6.13401 22 3 18.866 3 15V5C3 3.89543 3.89543 3 5 3C6.10457 3 7 3.89543 7 5V14H9V5H7Z"
       />
-      <circle cx="10" cy="15.5" r="1.5" />
+      {/* Streamline Solid: Knife (Right) */}
+      <path
+        fillRule="evenodd"
+        clipRule="evenodd"
+        d="M31 3C37.0751 3 42 7.92487 42 14V21C42 21.5523 41.5523 22 41 22H37V42C37 43.6569 35.6569 45 34 45C32.3431 45 31 43.6569 31 42V3Z"
+      />
     </svg>
   );
 }
